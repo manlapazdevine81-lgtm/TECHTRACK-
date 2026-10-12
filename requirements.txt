@@ -1,0 +1,14 @@
+# Phase 0 placeholder — dependencies are NOT installed yet.
+# Package selection, version pinning, and the Python 3.14 compatibility
+# check are deferred to Phase 1 (with approval).
+#
+# Expected (unconfirmed pins), roughly:
+#   Flask
+#   Flask-SQLAlchemy
+#   Flask-Migrate
+#   Flask-Login
+#   psycopg2-binary   (PostgreSQL driver — verify Python 3.14 support)
+#   python-dotenv
+#   pandas            (verify Python 3.14 support)
+#   gunicorn          (Render production server)
+#   pytest            (testing)

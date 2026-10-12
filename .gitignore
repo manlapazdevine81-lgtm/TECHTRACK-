@@ -1,0 +1,42 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Flask / app runtime ---
+instance/
+*.db
+*.sqlite3
+*.sqlite
+
+# --- Migrations (local dev artifacts) ---
+# (keep alembic versions tracked; ignore local migration caches)
+.cache/
+
+# --- Node (if any build tooling is added later) ---
+node_modules/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Logs & test artifacts ---
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
