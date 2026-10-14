@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TechIS Management System{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{% if current_user.is_authenticated %}app-shell{% else %}auth-shell{% endif %}">
+{% if current_user.is_authenticated %}
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">T</span>
+      <div>
+        <strong>TechIS</strong>
+        <small>Management System</small>
+      </div>
+    </div>
+    <div class="user-box">
+      <div class="user-name">{{ current_user.full_name }}</div>
+      <span class="role-badge role-{{ current_user.role_name }}">{{ current_user.role_display }}</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-link" href="{{ url_for('main.dashboard') }}">&#9632; Dashboard</a>
+      {% if current_user.role_name == 'system_administrator' %}
+      <div class="nav-section">Administration</div>
+      <a class="nav-link" href="{{ url_for('main.admin_users') }}">&#9632; User Management</a>
+      {% endif %}
+      <div class="nav-section">Modules</div>
+      {% for m in nav_modules %}
+      <a class="nav-link" href="{{ url_for('main.module_placeholder', key=m.key) }}">{{ m.label }}
+        <span class="chip">{{ m.phase }}</span>
+      </a>
+      {% endfor %}
+      {% if not nav_modules %}
+      <span class="nav-empty">No module links for this role yet.</span>
+      {% endif %}
+    </nav>
+    <form class="logout-form" method="post" action="{{ url_for('auth.logout') }}">
+      <button type="submit" class="btn btn-ghost">Log out</button>
+    </form>
+  </aside>
+{% endif %}
+
+<main class="content">
+  {% if current_user.is_authenticated %}
+  <button class="menu-toggle" type="button" onclick="document.body.classList.toggle('sidebar-open')" aria-label="Toggle navigation">&#9776;</button>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}403 Forbidden — TechIS{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h1>403 — Access denied</h1>
+  <p>Your role does not permit access to this page. Access is enforced on the server, not only by hiding menu links.</p>
+  <a class="btn btn-primary" href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.login') }}">
+    {{ 'Back to dashboard' if current_user.is_authenticated else 'Go to login' }}
+  </a>
+</div>
+{% endblock %}

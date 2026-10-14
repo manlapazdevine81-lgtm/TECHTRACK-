@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ module.label }} — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ module.label }}</h1>
+  <span class="chip">Placeholder · {{ module.phase }}</span>
+</div>
+
+<div class="notice notice-soft">
+  <strong>This module is not implemented yet.</strong><br>
+  {{ module.description }}<br><br>
+  This page exists only to demonstrate navigation and role-based access for the
+  professor's demonstration. Planned for <strong>{{ module.phase }}</strong>.
+</div>
+
+<a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">&larr; Back to dashboard</a>
+{% endblock %}
