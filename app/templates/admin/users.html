@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}User Management — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>User Management</h1>
+  <span class="chip chip-live">Working · read-only demo</span>
+</div>
+<p class="muted">All system accounts and their roles (server-side access restricted to the System Administrator).</p>
+
+<table class="table">
+  <thead>
+    <tr><th>#</th><th>Full name</th><th>Email</th><th>Student ID</th><th>Role</th><th>Active</th><th>Created (UTC)</th></tr>
+  </thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ u.full_name }}</td>
+      <td>{{ u.email }}</td>
+      <td>{{ u.student_id or '—' }}</td>
+      <td><span class="role-badge role-{{ u.role_name }}">{{ u.role_display }}</span></td>
+      <td>{{ 'Yes' if u.is_active else 'No' }}</td>
+      <td>{{ u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else '—' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">No users yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<p class="muted">Account creation/editing UI is planned for Phase 2 (admin CRUD).</p>
+{% endblock %}

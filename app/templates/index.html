@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}TechIS Management System{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <h1>TechIS Management System</h1>
+  <p class="muted"><em>Supporting Efficient Student Organization Management with Data-Driven Monitoring and Analytics for the Tech Innovators Society (TechIS) of Batangas State University – TNEU Lipa Campus.</em></p>
+  {% if current_user.is_authenticated %}
+    <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">Go to dashboard</a>
+  {% else %}
+    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Log in</a>
+    <a class="btn" href="{{ url_for('auth.register') }}">Register</a>
+  {% endif %}
+</div>
+{% endblock %}
