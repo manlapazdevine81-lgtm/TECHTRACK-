@@ -7,18 +7,100 @@
 </div>
 <p class="muted">Welcome, {{ current_user.full_name }}. Below are the modules your role may access.</p>
 
+{% if stats %}
+<div class="section-title">Organization overview <span class="muted" style="text-transform:none;letter-spacing:0">(live data)</span></div>
+<div class="kpi-grid">
+  {% if stats.total_members is defined %}
+  <div class="kpi-card">
+    <div class="kpi-label">Total members</div>
+    <div class="kpi-value" data-count="{{ stats.total_members }}">0</div>
+    <div class="kpi-sub">registered accounts</div>
+  </div>
+  {% endif %}
+  {% if stats.active_members is defined %}
+  <div class="kpi-card kpi-mint">
+    <div class="kpi-label">Active</div>
+    <div class="kpi-value" data-count="{{ stats.active_members }}">0</div>
+    <div class="kpi-sub">accounts that can sign in</div>
+    <div class="kpi-bar"><span style="width: {{ stats.active_pct }}%"></span></div>
+  </div>
+  <div class="kpi-card kpi-pink">
+    <div class="kpi-label">Inactive</div>
+    <div class="kpi-value" data-count="{{ stats.inactive_members }}">0</div>
+    <div class="kpi-sub">deactivated accounts</div>
+  </div>
+  <div class="kpi-card kpi-gold">
+    <div class="kpi-label">Active rate</div>
+    <div class="kpi-value" data-count="{{ stats.active_pct }}" data-count-suffix="%">0%</div>
+    <div class="kpi-sub">{{ stats.active_members }} of {{ stats.total_members }} accounts</div>
+  </div>
+  {% endif %}
+</div>
+
+{% if stats.by_role is defined %}
+<div class="section-title">Role distribution</div>
+<div class="kpi-grid">
+  {% for name, count in stats.by_role.items() %}
+  <div class="kpi-card">
+    <div class="kpi-label">
+      {% if name == 'system_administrator' %}System Administrators
+      {% elif name == 'techis_officer' %}TechIS Officers
+      {% elif name == 'techis_adviser' %}TechIS Adviser
+      {% else %}Event Participants{% endif %}
+    </div>
+    <div class="kpi-value" data-count="{{ count }}">0</div>
+    <div class="kpi-sub"><span class="role-badge role-{{ name }}">{{ name.replace('_', ' ') | title }}</span></div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if recent %}
+<div class="section-title">Recently added members</div>
+<table class="table">
+  <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for u in recent %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ u.full_name }}</td>
+      <td>{{ u.email }}</td>
+      <td><span class="role-badge role-{{ u.role_name }}">{{ u.role_display }}</span></td>
+      <td><span class="status-dot status-{{ 'on' if u.is_active else 'off' }}"></span>{{ 'Active' if u.is_active else 'Inactive' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if feedback_cta %}
+{# Shown only when a respondent arrives via the shared anonymous link. No token,
+   no per-respondent value, and nothing about this choice is stored (T7 pending). #}
+<div class="card-grid" style="margin-bottom:8px">
+  <a class="card card-live" href="{{ url_for('feedback.submit') }}">
+    <span class="chip chip-live">Anonymous</span>
+    <h2>Officer Feedback</h2>
+    <p>Give anonymous feedback about a TechIS officer. Your identity is never stored.</p>
+  </a>
+</div>
+{% endif %}
+
+<div class="section-title">Modules</div>
 <div class="card-grid">
   {% if current_user.role_name == 'system_administrator' %}
   <a class="card card-live" href="{{ url_for('main.admin_users') }}">
     <span class="chip chip-live">Working</span>
-    <h2>User Management</h2>
-    <p>View all system accounts and their assigned roles.</p>
+    <h2>Member Management</h2>
+    <p>Search, create, edit, activate and deactivate system accounts and their roles.</p>
   </a>
   {% endif %}
 
   {% for m in modules %}
-  <a class="card" href="{{ url_for('main.module_placeholder', key=m.key) }}">
-    <span class="chip">Placeholder · {{ m.phase }}</span>
+  <a class="card {{ 'card-live' if m.implemented else '' }}" href="{{ m.url }}">
+    <span class="chip {{ 'chip-live' if m.implemented else '' }}">
+      {{ 'Working' if m.implemented else 'Placeholder · ' ~ m.phase }}
+    </span>
     <h2>{{ m.label }}</h2>
     <p>{{ m.description }}</p>
   </a>
@@ -27,8 +109,8 @@
 
 <div class="notice notice-soft">
   Modules marked <strong>Placeholder</strong> are not implemented yet — they open a
-  clearly labeled status page, not a working feature. Only Authentication,
-  role-based access, navigation, and User Management are live for this
-  demonstration.
+  clearly labeled status page, not a working feature. Authentication, role-based
+  access, navigation, Member Management, Activities, Attendance and My Activities
+  are live in this system so far.
 </div>
 {% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{#
+  A 500 response renders inside a normal request, so the shared shell (sidebar,
+  navigation) is used unchanged. The only difference is that this page also
+  accepts a pre-built snapshot (`error_nav`, `error_user_name`,
+  `error_user_role`) for the case where the request failed after the ORM session
+  was already unusable.
+#}
+{% block title %}Something went wrong — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Something went wrong</h1>
+  <span class="chip">Server error</span>
+</div>
+
+{% if error_user_name %}
+<div class="notice notice-soft">
+  <p style="margin:0">Signed in as <strong>{{ error_user_name }}</strong>
+     {% if error_user_role %}({{ error_user_role }}){% endif %} — the navigation panel may
+     show only the basic links until this page is reloaded.</p>
+</div>
+{% endif %}
+
+<div class="empty-state" style="border-style:dashed">
+  <div class="empty-icon">&#9888;</div>
+  <h3>The page could not be completed</h3>
+  <p>An unexpected error occurred while handling your request. Your data was not
+    partially saved: database changes for the request are rolled back.</p>
+  <p style="margin-top:10px">Try again. If it keeps happening, contact the system
+    administrator and mention what you were doing.</p>
+</div>
+
+<a class="btn btn-primary btn-inline"
+  href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('main.index') }}">
+  &larr; {{ 'Back to dashboard' if current_user.is_authenticated else 'Back to home' }}
+</a>
+{% endblock %}

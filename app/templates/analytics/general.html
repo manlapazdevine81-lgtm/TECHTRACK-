@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}General Analytics — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>General Analytics</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+<p class="muted">
+  Attendance and participation computed with Pandas from recorded registrations and
+  attendance. Counts, percentages and dates only — no scores and no rankings.
+  Officer <em>responsibility</em> metrics live on
+  <a href="{{ url_for('analytics.analytics_dashboard') }}">Officer Performance Analytics</a>.
+</p>
+
+{% for message in filter_errors %}
+<div class="notice"><strong>Filter notice:</strong> {{ message }} Showing all activities.</div>
+{% endfor %}
+
+<form class="table-toolbar" method="get" action="{{ url_for('analytics.general_analytics') }}">
+  <select class="filter-select" name="academic_year" aria-label="Filter by academic year">
+    <option value="">All school years</option>
+    {% for year in academic_years %}
+    <option value="{{ year }}" {% if applied.academic_year == year %}selected{% endif %}>AY {{ year }}</option>
+    {% endfor %}
+  </select>
+  <select class="filter-select" name="activity_id" aria-label="Filter by activity">
+    <option value="">All activities</option>
+    {% for option in activity_options %}
+    <option value="{{ option.activity_id }}" {% if applied.activity_id == option.activity_id %}selected{% endif %}>{{ option.title }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-small" type="submit">Apply</button>
+  {% if applied.activity_id or applied.academic_year %}
+  <a class="btn btn-small btn-ghost" href="{{ url_for('analytics.general_analytics') }}">Clear</a>
+  {% endif %}
+  <span class="muted">Generated {{ generated_at.strftime('%Y-%m-%d %H:%M') }} UTC</span>
+</form>
+
+{% if not has_any_activities %}
+<div class="notice">
+  No activities exist yet, so there is no participation to analyse.
+  Create an activity and record registrations/attendance to populate this page.
+  Every rate stays blank (“—”) until its denominator exists.
+</div>
+{% elif not has_data %}
+<div class="notice">
+  No activities match the selected filters. Clear the filters to see all data.
+</div>
+{% endif %}
+
+<div class="section-title">Participation KPIs</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Activities</div>
+    <div class="kpi-value" data-count="{{ totals.activities }}">0</div>
+    <div class="kpi-sub">{{ totals.activities_with_registrations }} with registrations</div>
+  </div>
+  <div class="kpi-card kpi-mint">
+    <div class="kpi-label">Active registrations</div>
+    <div class="kpi-value" data-count="{{ totals.registered }}">0</div>
+    <div class="kpi-sub">cancelled excluded · {{ totals.cancelled_registrations }} cancelled</div>
+  </div>
+  <div class="kpi-card kpi-gold">
+    <div class="kpi-label">Attendance rows</div>
+    <div class="kpi-value" data-count="{{ totals.attendance_rows }}">0</div>
+    <div class="kpi-sub">{{ totals.walk_ins }} without a registration (walk-ins)</div>
+  </div>
+  <div class="kpi-card kpi-pink">
+    <div class="kpi-label">Registration → attendance</div>
+    <div class="kpi-value">
+      {% if totals.conversion_rate is none %}—{% else %}{{ totals.conversion_rate }}%{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if totals.conversion_rate is none %}no active registrations{% else %}{{ totals.attendance_rows }} of {{ totals.registered }} registrations{% endif %}
+    </div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Turnout</div>
+    <div class="kpi-value">
+      {% if totals.turnout_rate is none %}—{% else %}{{ totals.turnout_rate }}%{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if totals.turnout_rate is none %}no active registrations{% else %}present + late of {{ totals.registered }} registrations{% endif %}
+    </div>
+  </div>
+  <div class="kpi-card kpi-mint">
+    <div class="kpi-label">Attendance rate</div>
+    <div class="kpi-value">
+      {% if totals.attendance_rate is none %}—{% else %}{{ totals.attendance_rate }}%{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if totals.attendance_rate is none %}no attendance records{% else %}present + late of {{ totals.attendance_rows }} records{% endif %}
+    </div>
+  </div>
+  <div class="kpi-card kpi-gold">
+    <div class="kpi-label">Sessions with attendance</div>
+    <div class="kpi-value">
+      {% if totals.session_coverage_rate is none %}—{% else %}{{ totals.session_coverage_rate }}%{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if totals.session_coverage_rate is none %}no sessions with registrations{% else %}{{ totals.activities }} activities in scope{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="section-title">Attendance distribution</div>
+<div class="kpi-grid">
+  {% for status, count in {"present": totals.present, "late": totals.late, "absent": totals.absent, "excused": totals.excused}.items() %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ status | title }}</div>
+    <div class="kpi-value" data-count="{{ count }}">0</div>
+    <div class="kpi-sub">records</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-title">Monthly trend — registrations and attendance</div>
+<canvas id="trendChart" height="110" aria-label="Monthly registrations and attendance" role="img"></canvas>
+
+<div class="section-title">Participation by activity type</div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Activity type</th>
+      <th>Activities</th>
+      <th>Active registrations</th>
+      <th>Attendance rows</th>
+      <th>Registration → attendance</th>
+      <th>Attendance rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in by_type %}
+    <tr>
+      <td>{{ row.activity_type }}</td>
+      <td>{{ row.activities }}</td>
+      <td>{{ row.registered }}</td>
+      <td>{{ row.attendance_rows }}</td>
+      <td>{% if row.conversion_rate is none %}—{% else %}{{ row.conversion_rate }}%{% endif %}</td>
+      <td>{% if row.attendance_rate is none %}—{% else %}{{ row.attendance_rate }}%{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="6">No activities in scope.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="section-title">Per-activity participation</div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Activity</th>
+      <th>School year</th>
+      <th>Status</th>
+      <th>Active registrations</th>
+      <th>Attendance rows</th>
+      <th>Walk-ins</th>
+      <th>Registration → attendance</th>
+      <th>Attendance rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in detail %}
+    <tr>
+      <td><a href="{{ url_for('activities.activity_detail', activity_id=row.activity_id) }}">{{ row.title }}</a></td>
+      <td>{{ row.academic_year or '—' }}</td>
+      <td>{{ row.status | title }}</td>
+      <td>{{ row.registered }}</td>
+      <td>{{ row.attendance_rows }}</td>
+      <td>{{ row.walk_ins }}</td>
+      <td>{% if row.conversion_rate is none %}—{% else %}{{ row.conversion_rate }}%{% endif %}</td>
+      <td>{% if row.attendance_rate is none %}—{% else %}{{ row.attendance_rate }}%{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="8">No activities in scope.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="section-title">Reference</div>
+<p class="muted" style="margin-top:-6px">
+  School year is derived from each activity's start date (June–May boundary).
+  Registration → attendance = attendance rows ÷ active registrations, so walk-ins can push a
+  single activity above 100%; attendance rate = present + late ÷ attendance rows.
+  A blank (“—”) means the denominator is zero.
+  {% if organization_count %}
+  Organization record: AY {{ organization_years | select | join(', ') or 'not set' }}.
+  {% else %}
+  No organization record exists yet, so organization-level school years are not shown.
+  {% endif %}
+</p>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script id="general-analytics-data" type="application/json">
+  {{ {"labels": trend.labels, "registered": trend.registered, "attendance": trend.attendance} | tojson }}
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var el = document.getElementById("general-analytics-data");
+    var canvas = document.getElementById("trendChart");
+    if (!el || !canvas || !window.Chart) return;  // graceful if CDN unavailable
+    var data = JSON.parse(el.textContent);
+    new window.Chart(canvas, {
+      type: "line",
+      data: {
+        labels: data.labels,
+        datasets: [
+          {
+            label: "Active registrations",
+            data: data.registered,
+            borderColor: "#4f8cff",
+            backgroundColor: "rgba(79, 140, 255, .25)",
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: "Attendance rows",
+            data: data.attendance,
+            borderColor: "#08cfa5",
+            backgroundColor: "rgba(8, 207, 165, .18)",
+            tension: 0.3,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        animation: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? false : undefined,
+        plugins: { legend: { display: true, position: "bottom" } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

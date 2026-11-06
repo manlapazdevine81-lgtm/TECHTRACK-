@@ -1,18 +1,59 @@
 {% extends "base.html" %}
 {% block title %}Log in — TechIS{% endblock %}
 {% block content %}
+<script>
+  (function () {
+    try { document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
+  })();
+</script>
+<div class="aurora" aria-hidden="true"></div>
+<div class="aurora-geo g1" aria-hidden="true"></div>
+<div class="aurora-geo g2" aria-hidden="true"></div>
+<div class="aurora-geo g3" aria-hidden="true"></div>
+
+<div class="auth-hero">
+  <img class="hero-logo" src="{{ url_for('static', filename='techis-logo.jpg') }}"
+       alt="TechIS logo"
+       onerror="this.remove(); var m=document.querySelector('.hero-mark'); if(m) m.style.display='flex';">
+  <div class="hero-mark" style="display:none" aria-hidden="true">T</div>
+  <h1>TechIS Management System</h1>
+  <div class="hero-sub">Tech Innovators Society · BatStateU TNEU Lipa</div>
+</div>
+
 <div class="auth-card">
   <h1>Log in</h1>
-  <p class="muted">Tech Innovators Society (TechIS) — BatStateU TNEU Lipa Campus</p>
-  <form method="post" novalidate>
-    <label for="email">Email</label>
-    <input id="email" name="email" type="email" autocomplete="email" required value="{{ request.form.email or '' }}">
+  <p class="auth-lede">Welcome back. Sign in to your TechIS account.</p>
 
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      {% if category == "error" %}
+      <div class="flash flash-error" role="alert">{{ message }}</div>
+      {% endif %}
+    {% endfor %}
+  {% endwith %}
+
+  <form method="post" novalidate class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="field-group">
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" required
+             value="{{ request.form.email or '' }}"
+             placeholder="you@student.batstate-u.edu.ph">
+    </div>
+
+    <div class="field-group">
+      <label for="password">Password</label>
+      <div class="password-input">
+        <input id="password" name="password" type="password" autocomplete="current-password" required
+               placeholder="••••••••">
+        <button type="button" class="btn btn-small btn-toggle-pw" aria-label="Show password"
+                aria-controls="password">&#128065;</button>
+      </div>
+    </div>
 
     <button class="btn btn-primary" type="submit">Log in</button>
   </form>
-  <p class="muted">No account yet? <a href="{{ url_for('auth.register') }}">Register here</a>.</p>
+  <p class="auth-footer">No account yet? <a href="{{ url_for('auth.register') }}">Register here</a>.</p>
 </div>
 {% endblock %}

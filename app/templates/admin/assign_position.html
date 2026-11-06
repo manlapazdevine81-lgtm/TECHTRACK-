@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Assign position — {{ member.full_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Organizational position</h1>
+  <span class="chip">{{ member.full_name }}</span>
+  <a class="btn btn-inline" href="{{ url_for('main.admin_users') }}">&larr; All members</a>
+</div>
+
+<div class="notice notice-soft">
+  <p style="margin:0">This records the member's <strong>organizational position</strong> only.
+     It does <strong>not</strong> change their system role or grant any access — permissions come
+     solely from the four approved roles.</p>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">System role</div>
+    <div class="kpi-value" style="font-size:16px">{{ member.role_display }}</div>
+    <div class="kpi-sub">unchanged by this page</div>
+  </div>
+  <div class="kpi-card kpi-mint">
+    <div class="kpi-label">Current position</div>
+    <div class="kpi-value" style="font-size:16px">{{ current.position.title if current else '—' }}</div>
+    <div class="kpi-sub">
+      {% if current %}since {{ current.start_date.isoformat() }}{% else %}no position assigned{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if is_eligible %}
+<div class="section-title">Assign a position</div>
+<form class="table-toolbar" method="post" action="{{ url_for('positions.assign', user_id=member.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <select class="filter-select" name="position_id" aria-label="Position" required>
+    <option value="">Select a position…</option>
+    {% for p in positions %}
+    <option value="{{ p.id }}" {% if current and current.position_id == p.id %}selected{% endif %}>
+      {{ p.title }}{% if p.department %} — {{ p.department }}{% else %} — Executive Board{% endif %}
+    </option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-primary btn-small" type="submit">
+    {{ 'Change position' if current else 'Assign position' }}
+  </button>
+</form>
+<p class="muted">Assigning a new position ends the current one; the previous term is kept in the
+   history below. Several officers may hold the same position.</p>
+
+{% if current %}
+<form method="post" action="{{ url_for('positions.end', user_id=member.id) }}" class="inline-form"
+      style="margin-top:8px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-small btn-danger-ghost" type="submit">End current term</button>
+</form>
+{% endif %}
+{% else %}
+<div class="notice">
+  Organizational positions can only be assigned to System Administrators and TechIS Officers.
+  This member's role is <strong>{{ member.role_display }}</strong>.
+</div>
+{% endif %}
+
+<div class="section-title">Assignment history</div>
+<table class="table">
+  <thead>
+    <tr><th>Position</th><th>Department</th><th>Start</th><th>End</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+  {% for t in history %}
+    <tr>
+      <td>{{ t.position.title if t.position else '—' }}</td>
+      <td>{{ t.position.department if t.position and t.position.department else 'Executive Board' }}</td>
+      <td>{{ t.start_date.isoformat() if t.start_date else '—' }}</td>
+      <td>{{ t.end_date.isoformat() if t.end_date else '—' }}</td>
+      <td><span class="chip">{{ t.status | title }}</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">No position has ever been assigned to this member.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

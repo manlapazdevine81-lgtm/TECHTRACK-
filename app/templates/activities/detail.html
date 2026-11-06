@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}{{ activity.title }} — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ activity.title }}</h1>
+  <span class="chip">{{ activity.status | title }}</span>
+  <a class="btn btn-inline" href="{{ url_for('activities.activity_list') }}">&larr; All activities</a>
+  {% if can_manage %}
+  <a class="btn btn-primary btn-inline" href="{{ url_for('activities.activity_edit', activity_id=activity.id) }}">Edit</a>
+  {% endif %}
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Starts (UTC)</div>
+    <div class="kpi-value" style="font-size:16px">{{ activity.start_datetime.strftime('%Y-%m-%d %H:%M') if activity.start_datetime else '—' }}</div>
+    <div class="kpi-sub">ends {{ activity.end_datetime.strftime('%Y-%m-%d %H:%M') if activity.end_datetime else '—' }}</div>
+  </div>
+  <div class="kpi-card kpi-mint">
+    <div class="kpi-label">Registered</div>
+    <div class="kpi-value" data-count="{{ registered_user_ids | length }}">0</div>
+    <div class="kpi-sub">active participants</div>
+  </div>
+  <div class="kpi-card kpi-pink">
+    <div class="kpi-label">Attendance</div>
+    <div class="kpi-value" data-count="{{ attendance | length }}">0</div>
+    <div class="kpi-sub">records recorded</div>
+  </div>
+  <div class="kpi-card kpi-gold">
+    <div class="kpi-label">Responsible</div>
+    <div class="kpi-value" style="font-size:16px">{{ activity.responsible_officer.full_name if activity.responsible_officer else '—' }}</div>
+    <div class="kpi-sub">
+      {% if activity.responsible_officer %}
+        {{ responsible_officer_label }}
+      {% else %}
+        unassigned
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="section-title">Details</div>
+<div class="notice notice-soft">
+  <p style="margin:0 0 6px"><strong>Type:</strong> {{ activity.activity_type or '—' }}</p>
+  <p style="margin:0 0 6px"><strong>Venue:</strong> {{ activity.venue or '—' }}</p>
+  <p style="margin:0 0 6px"><strong>Created by:</strong> {{ activity.creator.full_name if activity.creator else '—' }}
+     ({{ activity.creator.role_display if activity.creator else '—' }})</p>
+  <p style="margin:0 0 6px"><strong>Created:</strong> {{ activity.created_at.strftime('%Y-%m-%d %H:%M') if activity.created_at else '—' }} UTC</p>
+  <p style="margin:0"><strong>Last updated:</strong> {{ activity.updated_at.strftime('%Y-%m-%d %H:%M') if activity.updated_at else '—' }} UTC</p>
+</div>
+
+{% if can_manage %}
+<div class="section-title">Status</div>
+{% set next_statuses = activity_statuses_map.get(activity.status, []) %}
+{% if next_statuses %}
+<div class="row-actions">
+  {% for target in next_statuses %}
+  <form method="post" action="{{ url_for('activities.activity_status', activity_id=activity.id) }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="status" value="{{ target }}">
+    <button class="btn btn-small {{ 'btn-danger-ghost' if target == 'cancelled' else 'btn-success-ghost' }}" type="submit">
+      {% if target == 'published' %}Publish{% elif target == 'completed' %}Mark completed{% elif target == 'cancelled' %}Cancel activity{% else %}{{ target | title }}{% endif %}
+    </button>
+  </form>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted">A {{ activity.status }} activity is final — its status can no longer change.</p>
+{% endif %}
+{% endif %}
+
+<div class="section-title">Registrations</div>
+{% if can_manage %}
+<table class="table">
+  <thead>
+    <tr><th>#</th><th>Participant</th><th>Role</th><th>Registered (UTC)</th><th>Status</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+  {% for r in registrations %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.user.full_name if r.user else '—' }}</td>
+      <td><span class="role-badge role-{{ r.user.role_name if r.user else '' }}">{{ r.user.role_display if r.user else '—' }}</span></td>
+      <td>{{ r.registration_date.strftime('%Y-%m-%d %H:%M') if r.registration_date else '—' }}</td>
+      <td><span class="chip">{{ r.status | title }}</span></td>
+      <td class="row-actions">
+        {% if r.is_active %}
+        <form method="post" action="{{ url_for('activities.activity_cancel_registration', activity_id=activity.id, user_id=r.user_id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-small btn-danger-ghost" type="submit">Cancel</button>
+        </form>
+        {% else %}
+        <span class="muted">Cancelled</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">Nobody has registered yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="notice notice-soft">
+  <p style="margin:0">Your registration:
+    {% if my_registration %}
+      <span class="chip">{{ my_registration.status | title }}</span>
+      registered {{ my_registration.registration_date.strftime('%Y-%m-%d %H:%M') if my_registration.registration_date else '—' }} UTC
+    {% else %}
+      <span class="chip">Not registered</span>
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+
+{% if can_manage and activity.status == 'published' %}
+<div class="section-title">Add a participant</div>
+<form class="table-toolbar" method="post" action="{{ url_for('activities.activity_add_registration', activity_id=activity.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <select class="filter-select" name="user_id" aria-label="Select a participant" required>
+    <option value="">Select a participant…</option>
+    {% for u in registration_candidates %}
+    <option value="{{ u.id }}">{{ u.full_name }} — {{ u.role_display }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-small" type="submit">Add registration</button>
+</form>
+{% endif %}
+
+<div class="section-title">Attendance</div>
+<table class="table">
+  <thead>
+    <tr><th>#</th><th>Participant</th><th>Status</th><th>Time in</th><th>Time out</th><th>Remarks</th><th>Recorded by</th></tr>
+  </thead>
+  <tbody>
+  {% for rec in attendance %}
+    <tr>
+      <td>{{ rec.id }}</td>
+      <td>{{ rec.user.full_name if rec.user else '—' }}</td>
+      <td><span class="chip">{{ rec.attendance_status | title }}</span></td>
+      <td>{{ rec.time_in.strftime('%Y-%m-%d %H:%M') if rec.time_in else '—' }}</td>
+      <td>{{ rec.time_out.strftime('%Y-%m-%d %H:%M') if rec.time_out else '—' }}</td>
+      <td>{{ rec.remarks or '—' }}</td>
+      <td>{{ rec.recorder.full_name if rec.recorder else '—' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">No attendance has been recorded yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if can_manage and activity.status in ('published', 'completed') %}
+<div class="section-title">Record attendance</div>
+<form class="table-toolbar" method="post" action="{{ url_for('activities.activity_attendance_record', activity_id=activity.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <select class="filter-select" name="user_id" aria-label="Select a participant" required>
+    <option value="">Select a participant…</option>
+    {% for u in attendance_candidates %}
+    <option value="{{ u.id }}">{{ u.full_name }}</option>
+    {% endfor %}
+  </select>
+  <select class="filter-select" name="attendance_status" aria-label="Attendance status" required>
+    {% for s in attendance_statuses %}
+    <option value="{{ s }}">{{ s | title }}</option>
+    {% endfor %}
+  </select>
+  <input type="datetime-local" name="time_in" aria-label="Time in">
+  <input type="datetime-local" name="time_out" aria-label="Time out">
+  <input type="text" name="remarks" placeholder="Remarks (optional)" aria-label="Remarks">
+  <button class="btn btn-small" type="submit">Record</button>
+</form>
+<p class="muted">Recording attendance for someone who is not registered links the row to their
+   registration when one exists; the database guarantees a row can never point at a
+   registration from a different activity or participant.</p>
+{% endif %}
+
+<div class="section-title">Officer responsibilities</div>
+<p class="muted" style="margin-top:-6px">
+  The sole mechanism for officer duties on this activity. Multiple officers may hold
+  separate responsibilities; the “Responsible officer” field above is kept for compatibility.
+</p>
+<table class="table">
+  <thead>
+    <tr><th>Officer</th><th>Responsibility</th><th>Due</th><th>Status</th><th>Completed (UTC)</th><th>Assigned by</th></tr>
+  </thead>
+  <tbody>
+  {% for a in assignments %}
+    <tr>
+      <td>{{ a.officer.full_name if a.officer else '—' }}</td>
+      <td>{{ a.responsibility }}</td>
+      <td>{{ a.due_date.isoformat() if a.due_date else '—' }}{% if a.is_overdue and a.status != 'completed' %} <span class="chip">Overdue</span>{% endif %}</td>
+      <td><span class="chip">{{ a.status | replace('_', ' ') | title }}</span></td>
+      <td>{{ a.completed_at.strftime('%Y-%m-%d %H:%M') if a.completed_at else '—' }}</td>
+      <td>{{ a.assigner.full_name if a.assigner else '—' }}</td>
+    </tr>
+    {% if can_edit_assignments %}
+    <tr>
+      <td colspan="6">
+        <form class="table-toolbar" method="post"
+              action="{{ url_for('activities.activity_assignment_edit', activity_id=activity.id, assignment_id=a.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select class="filter-select" name="officer_user_id" aria-label="Officer" required>
+            {% for u in assignment_candidates %}
+            <option value="{{ u.id }}" {% if u.id == a.officer_user_id %}selected{% endif %}>{{ u.full_name }} — {{ u.role_display }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="responsibility" value="{{ a.responsibility }}" aria-label="Responsibility" maxlength="2000" required>
+          <input type="date" name="due_date" value="{{ a.due_date.isoformat() if a.due_date else '' }}" aria-label="Due date">
+          <select class="filter-select" name="status" aria-label="Status">
+            <option value="{{ a.status }}" selected>{{ a.status | replace('_', ' ') | title }}</option>
+            {% for s in a.STATUS_TRANSITIONS.get(a.status, ()) %}
+            <option value="{{ s }}">{{ s | replace('_', ' ') | title }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-small" type="submit">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% endif %}
+  {% else %}
+    <tr><td colspan="6">No officer responsibilities assigned yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if can_edit_assignments %}
+<div class="section-title">Assign responsibility</div>
+<form class="table-toolbar" method="post" action="{{ url_for('activities.activity_assignment_create', activity_id=activity.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <select class="filter-select" name="officer_user_id" aria-label="Officer" required>
+    <option value="">Select an officer…</option>
+    {% for u in assignment_candidates %}
+    <option value="{{ u.id }}">{{ u.full_name }} — {{ u.role_display }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="responsibility" placeholder="Responsibility (e.g. coordinate venue)" aria-label="Responsibility" maxlength="2000" required>
+  <input type="date" name="due_date" aria-label="Due date">
+  <button class="btn btn-small btn-primary" type="submit">Assign</button>
+</form>
+{% endif %}
+
+{% if activity.description %}
+<div class="section-title">Description</div>
+<div class="notice notice-soft"><p style="margin:0">{{ activity.description }}</p></div>
+{% endif %}
+{% endblock %}

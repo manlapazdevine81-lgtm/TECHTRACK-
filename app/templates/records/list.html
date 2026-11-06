@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Organizational Records — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Organizational Records</h1>
+  <span class="chip chip-live">Working</span>
+  {% if can_manage %}
+  <a class="btn btn-primary btn-inline" href="{{ url_for('records.record_create') }}">+ Create record</a>
+  {% endif %}
+</div>
+<p class="muted">
+  {% if can_manage %}
+  Documents, awards, assets and meeting records for TechIS. File attachments are not enabled.
+  {% else %}
+  Read-only view of TechIS organizational records.
+  {% endif %}
+</p>
+
+{% if can_manage and not has_organization %}
+<div class="notice">
+  No organization record exists yet, so new records cannot be saved. An administrator must
+  create the organization first.
+</div>
+{% endif %}
+
+<div class="kpi-grid">
+  {% for type_key in record_types %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ type_labels.get(type_key, type_key) }}</div>
+    <div class="kpi-value" data-count="{{ counts.get(type_key, 0) }}">0</div>
+    <div class="kpi-sub">records</div>
+  </div>
+  {% endfor %}
+</div>
+
+<form class="table-toolbar" method="get" action="{{ url_for('records.record_list') }}">
+  <input type="search" name="q" value="{{ search }}" placeholder="Search title or description…"
+    aria-label="Search records">
+  <select class="filter-select" name="type" aria-label="Filter by record type">
+    <option value="">All types</option>
+    {% for type_key in record_types %}
+    <option value="{{ type_key }}" {% if record_type==type_key %}selected{% endif %}>{{ type_labels.get(type_key,
+      type_key) }}</option>
+    {% endfor %}
+  </select>
+  <input type="date" name="date" value="{{ date }}" aria-label="Filter by record date">
+  <button class="btn btn-small" type="submit">Filter</button>
+  {% if search or record_type or date %}
+  <a class="btn btn-small btn-ghost" href="{{ url_for('records.record_list') }}">Clear</a>
+  {% endif %}
+</form>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Title</th>
+      <th>Type</th>
+      <th>Record date</th>
+      <th>Description</th>
+      <th>Attachment</th>
+      <th>Created by</th>
+      <th>Last updated by</th>
+      {% if can_manage %}<th>Actions</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in records %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.title }}</td>
+      <td><span class="chip">{{ r.type_label }}</span></td>
+      <td>{{ r.record_date.isoformat() if r.record_date else '—' }}</td>
+      <td>{{ r.description or '—' }}</td>
+      <td>
+        {% if r.has_attachment %}
+        <a href="{{ url_for('records.record_attachment', record_id=r.id) }}"
+           title="Download {{ r.attachment_name }}">{{ r.attachment_name }}</a>
+        {% if r.attachment_size %}<span class="muted">({{ (r.attachment_size / 1024) | round(0) | int }} KB)</span>{% endif %}
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td>{{ r.creator.full_name if r.creator else '—' }}</td>
+      <td>{{ r.updater.full_name if r.updater else '—' }}</td>
+      {% if can_manage %}
+      <td class="row-actions">
+        <a class="btn btn-small" href="{{ url_for('records.record_edit', record_id=r.id) }}">Edit</a>
+      </td>
+      {% endif %}
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="{{ 9 if can_manage else 8 }}">No records match these filters.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if not records %}
+<div class="empty-state">
+  <div class="empty-icon">&#128218;</div>
+  <h3>No organizational records to show</h3>
+  <p>
+    {% if search or record_type or date %}Try clearing the filters.
+    {% else %}Create the first record to start building the TechIS archive.{% endif %}
+  </p>
+  {% if can_manage and has_organization %}
+  <a class="btn btn-primary btn-inline" href="{{ url_for('records.record_create') }}">+ Create record</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

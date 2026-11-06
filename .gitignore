@@ -40,3 +40,43 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# --- Database backups ---
+backups/
+*.backup
+*.backup.zip
+*.dump
+*.sql
+
+# --- Temporary QA and diagnostic artifacts ---
+_qa_*/
+_qa_*.py
+_qa_*.txt
+_pytest_*.txt
+_pw_*.txt
+_feedback_test_results.txt
+full_output.txt
+out.txt
+results.txt
+
+# --- Temporary diagnostic scripts ---
+_check_db.py
+_qa_diagnose*.py
+_run_feedback_tests.py
+_run_pytest_feedback.py
+_simple_feedback_test.py
+_verify_feedback.py
+
+# --- Local credential verification scripts ---
+verify.py
+test_auth.py
+
+# --- Demo credential seeding ---
+scripts/seed_demo.py
+
+# Demo credential scripts - keep local, exclude from GitHub
+scripts/seed_demo.py
+scripts/verify_demo_accounts.py
+scripts/verify_demo_login.py
+verify.py
+test_auth.py

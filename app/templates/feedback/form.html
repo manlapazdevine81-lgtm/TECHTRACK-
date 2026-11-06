@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Officer Feedback — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Officer Feedback</h1>
+  <span class="chip chip-live">Anonymous</span>
+</div>
+
+<div class="notice">
+  <p style="margin:0 0 6px"><strong>This form is anonymous.</strong></p>
+  <p style="margin:0">Your identity is never stored. The system records only <em>which officer</em>
+    the feedback is about — there is no account field, no respondent ID, no token, and no
+    submission time kept at per-response precision. Please do not include your name or anything
+    that identifies you in written answers.</p>
+</div>
+
+{% if not questions %}
+<div class="empty-state">
+  <div class="empty-icon">&#128172;</div>
+  <h3>Feedback questions are not finalized yet</h3>
+  <p>The question set and rating scale are still pending confirmation (T6), so the form cannot
+    accept responses yet. No answers have been collected.</p>
+</div>
+{% elif not officers %}
+<div class="empty-state">
+  <div class="empty-icon">&#128101;</div>
+  <h3>No officers available to evaluate</h3>
+  <p>Feedback can be submitted once TechIS officers are registered and active.</p>
+</div>
+{% else %}
+<div class="form-panel">
+  <form method="post" novalidate class="member-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="officer_user_id">Officer being evaluated *</label>
+    <select id="officer_user_id" name="officer_user_id" required>
+      <option value="">Select an officer…</option>
+      {% for o in officers %}
+      <option value="{{ o.id }}" {% if form_values.get('officer_user_id')==o.id | string %}selected{% endif %}>
+        {{ officer_labels.get(o.id, o.full_name) }}
+      </option>
+      {% endfor %}
+    </select>
+
+    {% for q in questions %}
+    <label for="q_{{ q.id }}">{{ q.question_text }}</label>
+    {% if q.is_rating %}
+    {% set low = q.scale_min if q.scale_min is not none else 1 %}
+    {% set high = q.scale_max if q.scale_max is not none else 5 %}
+    <select id="q_{{ q.id }}" name="q_{{ q.id }}">
+      <option value="">Select…</option>
+      {% for n in range(low, high + 1) %}
+      <option value="{{ n }}" {% if form_values.get('q_' ~ q.id)==n | string %}selected{% endif %}>{{ n }}</option>
+      {% endfor %}
+    </select>
+    <p class="muted" style="margin-top:-6px">Scale {{ low }}–{{ high }}</p>
+    {% else %}
+    <textarea id="q_{{ q.id }}" name="q_{{ q.id }}" rows="4">{{ form_values.get('q_' ~ q.id, '') }}</textarea>
+    {% endif %}
+    {% endfor %}
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Submit anonymously</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

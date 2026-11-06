@@ -46,12 +46,34 @@
 | T11 | When officers may see their own feedback (immediately vs. after term) | |
 | T12 | "Activities organized/created" as a performance indicator | Not counted until confirmed |
 | T13 | Report formats (CSV vs. PDF) + required standard reports | |
-| T14 | File uploads for Organizational Records | |
+| T14 | File uploads for Organizational Records | **APPROVED 2026-11-02** — see below. Originally unconfirmed; now resolved. |
 | T15 | Adviser approval rights over activities/users | |
 | T16 | Timeline/defense date + required documentation deliverables | |
 | T17 | Official branding assets (logos, colors) | |
 | T18 | **Whether event participants have permanent system accounts** | Participants may NOT be `users` records; `event_participants` and `attendance` relationships require confirmation before implementation |
 | T19 | **Position-based permission matrix** | `permission_level` frozen; no access granted by numeric rank; only the 4 confirmed roles authorize access |
+
+## TBC resolution history
+
+### T14 — File uploads for Organizational Records — **APPROVED** (2026-11-02)
+Previously listed as unresolved. The approved scope is deliberately narrow:
+
+| Decision | Approved value |
+|---|---|
+| Allowed extensions | `.doc`, `.docx`, `.csv`, `.pdf` (server-side allowlist; no others) |
+| Maximum size | **10 MB** per file (enforced in `app/utils/uploads.py`, plus a request-level cap in `Config.MAX_CONTENT_LENGTH`) |
+| Storage root | `instance/uploads/records/` — deliberately **outside** `static/`, so no file is reachable via a static URL |
+| Stored filename | Opaque `UUID4.ext`, generated server-side. The client-supplied name is never used as a path |
+| Original filename | Stored in `organizational_records.attachment_name` and displayed to staff |
+| Size | Stored in `organizational_records.attachment_size` (bytes) |
+| File reference | Reuses the existing `organizational_records.file_url` column (holds the opaque key) |
+| Download access | System Administrator, TechIS Officer, Adviser. **Event Participants: 403** |
+| Replacement | Uploading a new file replaces the previous attachment. The old file is deleted **only after** the replacement is stored and the database update committed |
+| Schema change | Two nullable columns added (`attachment_name`, `attachment_size`) — migration `a7b8c9d0e1f2` |
+
+Still **not** approved (do not assume): other file types, larger files, public/anonymous
+access to attachments, versioning or multiple attachments per record, virus scanning,
+or storing attachments in object storage.
 
 ## Approved decisions (baked in)
 - TechIS-only scope

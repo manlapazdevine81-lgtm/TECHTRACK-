@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Activities — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Activities</h1>
+  <span class="chip chip-live">Working</span>
+  {% if can_manage %}
+  <a class="btn btn-primary btn-inline" href="{{ url_for('activities.activity_create') }}">+ New activity</a>
+  {% endif %}
+</div>
+<p class="muted">
+  {% if can_manage %}
+  Create, publish and track TechIS activities. Officers manage only the activities they created.
+  {% else %}
+  Read-only view of TechIS activities.
+  {% endif %}
+</p>
+
+<div class="kpi-grid">
+  {% for status, count in counts.items() %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ status | title }}</div>
+    <div class="kpi-value" data-count="{{ count }}">0</div>
+    <div class="kpi-sub">activities</div>
+  </div>
+  {% endfor %}
+</div>
+
+<form class="table-toolbar" method="get" action="{{ url_for('activities.activity_list') }}">
+  <input type="search" name="q" value="{{ search }}" placeholder="Search title, venue, or type…" aria-label="Search activities">
+  <select class="filter-select" name="status" aria-label="Filter by status">
+    <option value="">All statuses</option>
+    {% for s in ('draft', 'published', 'completed', 'cancelled') %}
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s | title }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-small" type="submit">Filter</button>
+  {% if search or status %}
+  <a class="btn btn-small btn-ghost" href="{{ url_for('activities.activity_list') }}">Clear</a>
+  {% endif %}
+</form>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Title</th>
+      <th>Type</th>
+      <th>Venue</th>
+      <th>Starts (UTC)</th>
+      <th>Status</th>
+      <th>Registered</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for a in activities %}
+    <tr>
+      <td>{{ a.id }}</td>
+      <td><a href="{{ url_for('activities.activity_detail', activity_id=a.id) }}">{{ a.title }}</a></td>
+      <td>{{ a.activity_type or '—' }}</td>
+      <td>{{ a.venue or '—' }}</td>
+      <td>{{ a.start_datetime.strftime('%Y-%m-%d %H:%M') if a.start_datetime else '—' }}</td>
+      <td><span class="chip">{{ a.status | title }}</span></td>
+      <td>{{ a.registrations | selectattr('is_active') | list | length }}</td>
+      <td class="row-actions">
+        <a class="btn btn-small" href="{{ url_for('activities.activity_detail', activity_id=a.id) }}">Open</a>
+        {% if a.id in manageable_ids %}
+        <a class="btn btn-small" href="{{ url_for('activities.activity_edit', activity_id=a.id) }}">Edit</a>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8">No activities yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if not activities %}
+<div class="empty-state">
+  <div class="empty-icon">&#128197;</div>
+  <h3>No activities to show</h3>
+  <p>{% if search or status %}Try clearing the filters.{% else %}Create the first activity to get started.{% endif %}</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -6,12 +6,14 @@
   <span class="chip">Placeholder · {{ module.phase }}</span>
 </div>
 
-<div class="notice notice-soft">
-  <strong>This module is not implemented yet.</strong><br>
-  {{ module.description }}<br><br>
-  This page exists only to demonstrate navigation and role-based access for the
-  professor's demonstration. Planned for <strong>{{ module.phase }}</strong>.
+<div class="empty-state" style="border-style:dashed">
+  <div class="empty-icon">&#128736;</div>
+  <h3>This module is not implemented yet.</h3>
+  <p>{{ module.description }}</p>
+  <p style="margin-top:10px">This page exists only to demonstrate navigation and
+     role-based access. Planned for <strong>{{ module.phase }}</strong> — no data
+     is shown here because none exists for this module.</p>
 </div>
 
-<a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">&larr; Back to dashboard</a>
+<a class="btn btn-primary btn-inline" href="{{ url_for('main.dashboard') }}">&larr; Back to dashboard</a>
 {% endblock %}

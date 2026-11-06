@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Officer Performance Analytics — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Officer Performance Analytics</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+<p class="muted">
+  Objective, record-based metrics only: counts, percentages, and timelines.
+  No scores, no rankings, no subjective grades.
+  “Activities organized/created” is intentionally excluded pending decision T12.
+</p>
+<p class="muted">
+  Attendance and participation trends are on
+  <a href="{{ url_for('analytics.general_analytics') }}">General Analytics</a>.
+</p>
+
+{% if not has_data %}
+<div class="notice">
+  No officer responsibilities have been recorded yet, so there is nothing to measure.
+  Assign responsibilities from an activity's detail page to populate this dashboard.
+</div>
+{% endif %}
+
+<div class="section-title">Responsibilities</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Assigned</div>
+    <div class="kpi-value" data-count="{{ totals.assigned }}">0</div>
+    <div class="kpi-sub">responsibilities</div>
+  </div>
+  <div class="kpi-card kpi-mint">
+    <div class="kpi-label">Completed</div>
+    <div class="kpi-value" data-count="{{ totals.completed }}">0</div>
+    <div class="kpi-sub">responsibilities</div>
+  </div>
+  <div class="kpi-card kpi-pink">
+    <div class="kpi-label">Overdue</div>
+    <div class="kpi-value" data-count="{{ totals.overdue }}">0</div>
+    <div class="kpi-sub">past due, not completed</div>
+  </div>
+  <div class="kpi-card kpi-gold">
+    <div class="kpi-label">Completion rate</div>
+    <div class="kpi-value">
+      {% if totals.completion_rate is none %}—{% else %}{{ totals.completion_rate }}%{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if totals.completion_rate is none %}no assignments yet{% else %}{{ totals.completed }} of {{ totals.assigned
+      }}{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="section-title">Attendance</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Attendance rate</div>
+    <div class="kpi-value">
+      {% if totals.attendance_rate is none %}—{% else %}{{ totals.attendance_rate }}%{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if totals.attendance_rate is none %}no attendance records{% else %}present + late of {{ totals.attendance_total
+      }} records{% endif %}
+    </div>
+  </div>
+  {% for status, count in attendance.items() %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ status | title }}</div>
+    <div class="kpi-value" data-count="{{ count }}">0</div>
+    <div class="kpi-sub">records</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-title">Timeline — assigned responsibilities per activity month</div>
+<canvas id="timelineChart" height="110" aria-label="Monthly assigned responsibilities" role="img"></canvas>
+
+<div class="section-title">Per-officer metrics (alphabetical)</div>
+<p class="muted" style="margin-top:-6px">
+  Listed by name, not by performance — the order carries no meaning.
+</p>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Officer</th>
+      <th>Assigned</th>
+      <th>Completed</th>
+      <th>Open</th>
+      <th>Overdue</th>
+      <th>Completion rate</th>
+      <th>Participation</th>
+      <th>Attendance</th>
+      <th>Attendance rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in officers %}
+    <tr>
+      <td>{{ row.officer.full_name }}</td>
+      <td>{{ row.assigned }}</td>
+      <td>{{ row.completed }}</td>
+      <td>{{ row.open }}</td>
+      <td>{{ row.overdue }}</td>
+      <td>{% if row.completion_rate is none %}—{% else %}{{ row.completion_rate }}%{% endif %}</td>
+      <td>{{ row.registrations }}</td>
+      <td>{{ row.attendance_total }}</td>
+      <td>{% if row.attendance_rate is none %}—{% else %}{{ row.attendance_rate }}%{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="9">No eligible officers found.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script id="analytics-data" type="application/json">
+  {{ {"labels": timeline.labels, "counts": timeline.counts} | tojson }}
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var el = document.getElementById("analytics-data");
+    var canvas = document.getElementById("timelineChart");
+    if (!el || !canvas || !window.Chart) return;  // graceful if CDN unavailable
+    var data = JSON.parse(el.textContent);
+    new window.Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: "Assigned responsibilities",
+          data: data.counts,
+          backgroundColor: "#4f8cff"
+        }]
+      },
+      options: {
+        responsive: true,
+        animation: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? false : undefined,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

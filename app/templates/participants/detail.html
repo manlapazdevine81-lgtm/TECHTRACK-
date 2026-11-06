@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ participant.full_name }} — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ participant.full_name }}</h1>
+  <span class="role-badge role-{{ participant.role_name }}">{{ participant.role_display }}</span>
+  {% if is_staff %}
+  <a class="btn btn-inline" href="{{ url_for('participants.participant_list') }}">&larr; All participants</a>
+  {% endif %}
+</div>
+<p class="muted">Read-only participant record. Registration and attendance history shown as recorded.</p>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Registrations</div>
+    <div class="kpi-value" data-count="{{ registrations | length }}">0</div>
+    <div class="kpi-sub">
+      {{ registrations | selectattr('is_active') | list | length }} active
+    </div>
+  </div>
+  {% for status, count in attendance_counts.items() %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ status | title }}</div>
+    <div class="kpi-value" data-count="{{ count }}">0</div>
+    <div class="kpi-sub">attendance rows</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-title">Account</div>
+<div class="notice notice-soft">
+  <p style="margin:0 0 6px"><strong>Email:</strong> {{ participant.email }}</p>
+  <p style="margin:0 0 6px"><strong>Student ID:</strong> {{ participant.student_id or '—' }}</p>
+  <p style="margin:0"><strong>Account status:</strong> {{ 'Active' if participant.is_active else 'Inactive' }}</p>
+</div>
+
+<div class="section-title">Registrations</div>
+<table class="table">
+  <thead>
+    <tr><th>Activity</th><th>Activity status</th><th>Registered (UTC)</th><th>Registration status</th></tr>
+  </thead>
+  <tbody>
+  {% for r in registrations %}
+    <tr>
+      <td>
+        {% if is_staff %}
+        <a href="{{ url_for('activities.activity_detail', activity_id=r.activity_id) }}">{{ r.activity.title if r.activity else '—' }}</a>
+        {% else %}{{ r.activity.title if r.activity else '—' }}{% endif %}
+      </td>
+      <td><span class="chip">{{ r.activity.status | title if r.activity else '—' }}</span></td>
+      <td>{{ r.registration_date.strftime('%Y-%m-%d %H:%M') if r.registration_date else '—' }}</td>
+      <td><span class="chip">{{ r.status | title }}</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">No registrations on record.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="section-title">Attendance</div>
+<table class="table">
+  <thead>
+    <tr><th>Activity</th><th>Status</th><th>Time in (UTC)</th><th>Time out (UTC)</th><th>Remarks</th><th>Recorded (UTC)</th></tr>
+  </thead>
+  <tbody>
+  {% for rec in attendance %}
+    <tr>
+      <td>{{ rec.activity.title if rec.activity else '—' }}</td>
+      <td><span class="chip">{{ rec.attendance_status | title }}</span></td>
+      <td>{{ rec.time_in.strftime('%Y-%m-%d %H:%M') if rec.time_in else '—' }}</td>
+      <td>{{ rec.time_out.strftime('%Y-%m-%d %H:%M') if rec.time_out else '—' }}</td>
+      <td>{{ rec.remarks or '—' }}</td>
+      <td>{{ rec.recorded_at.strftime('%Y-%m-%d %H:%M') if rec.recorded_at else '—' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">No attendance has been recorded.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

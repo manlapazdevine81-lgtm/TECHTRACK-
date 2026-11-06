@@ -80,34 +80,72 @@ TechIS-only; retained for academic-year history.
 | status | VARCHAR | |
 
 ### activities
+> Implemented columns (Phase 2 migration `625c94493a3d` plus the single-officer legacy field):
+> `id`, `title`, `description`, `activity_type`, `venue`, `start_datetime`, `end_datetime`, `status`,
+> `responsible_officer_id` (nullable legacy FK → users), `created_by`, `created_at`, `updated_at`.
+> **Not yet implemented:** `organization_id` (depends on `organizations`, Phase 2) and
+> `max_participants` (T2). Implemented status values are `draft` / `published` / `completed` /
+> `cancelled` — the table below lists the original design wording (`upcoming`/`ongoing`) which the
+> code does not use.
+
 | Column | Type | Notes |
 |---|---|---|
 | id | PK | |
-| organization_id | FK → organizations | |
+| organization_id | FK → organizations | not implemented yet |
 | title | VARCHAR | |
 | description | TEXT | |
 | activity_type | VARCHAR | categories **TBC** |
 | venue | VARCHAR | |
 | start_datetime / end_datetime | TIMESTAMP | |
-| status | VARCHAR | draft / upcoming / ongoing / completed / cancelled |
+| status | VARCHAR | draft / upcoming / ongoing / completed / cancelled — implemented as draft / published / completed / cancelled |
 | created_by | FK → users | |
-| max_participants | INTEGER, nullable | registration rules **TBC (T2)** |
+| max_participants | INTEGER, nullable | registration rules **TBC (T2)** — not implemented |
 
-### activity_assignments (C4)
-Feeds the "assigned" and "completed responsibilities" officer-performance metrics as raw counts.
+### activity_assignments (C4) — **implemented in Phase 3**
+Feeds the "assigned" and "completed responsibilities" officer-performance metrics as raw counts
+(consumed in Phase 5; nothing aggregates them yet). Model: `app/models/assignment.py`, class
+`ActivityAssignment`. Migration: `phase3assign` (created; **not yet applied**).
 
 | Column | Type | Notes |
 |---|---|---|
 | id | PK | |
-| activity_id | FK → activities | |
-| officer_user_id | FK → users | officer responsible |
-| responsibility | TEXT | description of duty |
-| assigned_by | FK → users | |
-| due_date | DATE | |
-| status | VARCHAR | assigned / in_progress / completed / overdue |
-| completed_at | TIMESTAMP | |
+| activity_id | FK → activities | indexed; **NOT NULL** |
+| officer_user_id | FK → users | officer responsible; indexed; **NOT NULL** |
+| responsibility | TEXT | description of duty; **NOT NULL**, max 2000 chars (enforced in route validation) |
+| assigned_by | FK → users | who created the assignment; **NOT NULL** |
+| due_date | DATE, nullable | optional |
+| status | VARCHAR(16) | `assigned` / `in_progress` / `completed` / `overdue`; default `assigned`; indexed |
+| completed_at | TIMESTAMP (tz), nullable | set when the status becomes `completed`, cleared otherwise |
+| created_at | TIMESTAMP (tz) | **NOT NULL**, default UTC now |
+| updated_at | TIMESTAMP (tz) | **NOT NULL**, default UTC now, updated on change |
 
-Whether "activities organized/created" is also an indicator: **TBC (T12)**.
+**Relationships:** `activity` (many-to-one → `activities`), `officer` (many-to-one → `users` via
+`officer_user_id`), `assigner` (many-to-one → `users` via `assigned_by`). On the `Activity` side:
+`Activity.assignments` (one-to-many) with `cascade="save-update, merge"` — assignments are never
+silently deleted.
+
+**Constraints and rules:**
+- `UNIQUE (activity_id, officer_user_id, responsibility)` (`uq_assignment_activity_officer_responsibility`):
+  the same officer cannot hold the same duty twice on one activity, while multiple officers and
+  multiple duties per officer are allowed.
+- One activity may carry **many** assignments — assignments are the sole responsibility mechanism (C4).
+- Only the four confirmed roles authorize anything (C3/T19). Eligibility is limited to **active**
+  `system_administrator` and `techis_officer` accounts (`ActivityAssignment.ELIGIBLE_ROLES`);
+  `positions.permission_level` does not exist yet and must never be read.
+- Assignment status transitions are enforced by `ActivityAssignment.set_status()`:
+  `assigned → in_progress | completed`, `in_progress → completed | assigned`,
+  `completed → in_progress`, `overdue → in_progress | completed`.
+- `overdue` is a **derived** state (`is_overdue` property: due date has passed and the duty is not
+  completed). Nothing writes `overdue` automatically.
+- Assignments cannot be added or changed on a `completed` or `cancelled` activity (terminal statuses).
+- **Assignments are not closed automatically** when an activity is completed or cancelled; existing
+  rows keep their current status. No automatic closure workflow is defined.
+
+**Legacy field:** `activities.responsible_officer_id` is retained for backward compatibility with
+current routes and templates (a single, optional officer). It has no ERD status of its own and is
+pending a planned transition to assignments; do not remove it without a compatibility plan.
+
+Whether "activities organized/created" is also an indicator: **TBC (T12)** — not implemented.
 
 ### event_participants — relationship **TBC (T18)**
 | Column | Type | Notes |
@@ -132,6 +170,14 @@ Whether "activities organized/created" is also an indicator: **TBC (T12)**.
 | | | UNIQUE(activity_id, user_id) — valid only under Design A |
 
 Participation points: **REMOVED / TBC (T1)** — no scoring formula stored.
+
+> **Implementation note (Phase 4A/4B) — no schema change.** The implemented tables are
+> `activity_registrations` and `attendance_records` (migration `625c94493a3d`). Their `user_id` columns are
+> hard FKs to `users`, i.e. the code currently assumes **Design A** while **T18 remains unresolved**.
+> The read-only Event Participants module (`GET /participants`, `GET /participants/<user_id>`) reads only
+> these two tables: the roster lists accounts holding a registration row and the detail page shows that
+> account's registration and attendance history. **No participant entity, guest identity, approval/waitlist
+> column (T2), or participation-points field (T1) was added.** No migration was created for Phase 4.
 
 ### organizational_records
 | Column | Type | Notes |

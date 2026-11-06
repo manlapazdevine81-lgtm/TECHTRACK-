@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }} — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ form_title }}</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+
+<div class="notice">
+  Records belong to the TechIS organization and are never deleted — edit a record to
+  correct it. The record date is required. An optional attachment (.doc, .docx, .csv,
+  .pdf — up to 10 MB) may be added; uploading a new file replaces the previous one.
+</div>
+
+<div class="form-panel">
+  <form method="post" novalidate class="member-form" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="title">Title *</label>
+    <input id="title" name="title" type="text" required maxlength="255"
+           value="{{ form_values.get('title', '') }}">
+
+    <label for="record_type">Record type *</label>
+    <select id="record_type" name="record_type" required>
+      {% for type_key in record_types %}
+      <option value="{{ type_key }}"
+        {% if form_values.get('record_type', '') == type_key %}selected{% endif %}>
+        {{ type_labels.get(type_key, type_key) }}
+      </option>
+      {% endfor %}
+    </select>
+
+    <label for="record_date">Record date *</label>
+    <input id="record_date" name="record_date" type="date" required
+           value="{{ form_values.get('record_date', '') }}">
+
+    <label for="description">Description <span class="muted">(optional)</span></label>
+    <textarea id="description" name="description" rows="5">{{ form_values.get('description', '') }}</textarea>
+
+    <label for="attachment">Attachment <span class="muted">(optional — .doc, .docx, .csv, .pdf, max 10 MB)</span></label>
+    {% if record and record.has_attachment %}
+    <p class="muted" style="margin:0 0 6px">
+      Current: <strong>{{ record.attachment_name }}</strong>
+      <a class="btn btn-small" href="{{ url_for('records.record_attachment', record_id=record.id) }}">Download</a>
+    </p>
+    {% endif %}
+    <input id="attachment" name="attachment" type="file"
+           accept=".doc,.docx,.csv,.pdf">
+    <p class="muted" style="margin-top:-6px">
+      {% if record and record.has_attachment %}
+      Choosing a new file replaces the current attachment.
+      {% else %}
+      Leave empty for a record with no attachment.
+      {% endif %}
+    </p>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">
+        {{ 'Create record' if not record else 'Save changes' }}
+      </button>
+      <a class="btn" href="{{ url_for('records.record_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Organization Structure — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Organization Structure</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+<p class="muted">
+  The TechIS Executive Board and its departments, with the official duties of each position.
+  This page is a reference only — position titles do not grant system access.
+</p>
+
+<div class="kpi-grid">
+  {% for section in sections %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ section.label }}</div>
+    <div class="kpi-value" data-count="{{ section.count }}">0</div>
+    <div class="kpi-sub">{{ 'position' if section.count == 1 else 'positions' }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<form class="table-toolbar" method="get" action="{{ url_for('organization.structure') }}">
+  <input type="search" name="q" value="{{ search }}" placeholder="Search position or duty…"
+    aria-label="Search positions">
+  <select class="filter-select" name="department" aria-label="Filter by department">
+    <option value="">All sections</option>
+    {% for name in section_names %}
+    <option value="{{ name }}" {% if selected_department==name %}selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-small" type="submit">Filter</button>
+  {% if search or selected_department %}
+  <a class="btn btn-small btn-ghost" href="{{ url_for('organization.structure') }}">Clear</a>
+  {% endif %}
+</form>
+
+{% for section in sections %}
+<div class="section-title">{{ section.label }}
+  <span class="chip">{{ section.count }}</span>
+</div>
+
+{% if section.positions %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Position</th>
+      <th>Duties and responsibilities</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for position in section.positions %}
+    <tr>
+      <td><strong>{{ position.title }}</strong></td>
+      <td>
+        <ul style="margin:0;padding-left:18px;line-height:1.55">
+          {% for duty in position.duties %}
+          <li>{{ duty }}</li>
+          {% else %}
+          <li class="muted">No duties recorded for this position.</li>
+          {% endfor %}
+        </ul>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="notice notice-soft">
+  <p style="margin:0">
+    {% if search or selected_department %}
+    No positions in this section match the current search or filter.
+    {% else %}
+    No positions are confirmed for this section yet.
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if not has_results %}
+<div class="empty-state">
+  <div class="empty-icon">&#127970;</div>
+  <h3>No positions match your search</h3>
+  <p>Try a different term, or clear the filters to see the full structure.</p>
+  <a class="btn btn-primary btn-inline" href="{{ url_for('organization.structure') }}">Clear filters</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -55,6 +55,13 @@ class User(UserMixin, db.Model):
     student_id = db.Column(db.String(64), unique=True, nullable=True)
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    # Set when an account is provisioned with a temporary password. While True,
+    # the request gate in app/__init__.py confines the user to the password-change
+    # page. Existing accounts (and normal self-registration) default to False.
+    # `server_default` keeps the column non-null for rows written outside the ORM.
+    must_change_password = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.text("false")
+    )
     created_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

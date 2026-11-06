@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Event Participants — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Event Participants</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+<p class="muted">
+  Read-only roster of accounts that hold a registration record. Participant identity
+  design is still pending (T18), so no separate participant entity or guest identity is
+  created here — these are the same system accounts the registration and attendance
+  modules already use.
+</p>
+
+<form class="table-toolbar" method="get" action="{{ url_for('participants.participant_list') }}">
+  <input type="search" name="q" value="{{ search }}" placeholder="Search name, email, or student ID…"
+         aria-label="Search participants">
+  <select class="filter-select" name="role" aria-label="Filter by role">
+    <option value="">All roles</option>
+    {% for r in roles %}
+    <option value="{{ r.name }}" {% if role == r.name %}selected{% endif %}>{{ r.display_name }}</option>
+    {% endfor %}
+  </select>
+  <select class="filter-select" name="activity_id" aria-label="Filter by activity">
+    <option value="">All activities</option>
+    {% for a in activities %}
+    <option value="{{ a.id }}" {% if activity_id == a.id %}selected{% endif %}>{{ a.title }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-small" type="submit">Filter</button>
+  {% if search or role or activity_id %}
+  <a class="btn btn-small btn-ghost" href="{{ url_for('participants.participant_list') }}">Clear</a>
+  {% endif %}
+  <span class="muted">{{ total }} participant{{ '' if total == 1 else 's' }}</span>
+</form>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>#</th><th>Name</th><th>Email</th><th>Student ID</th><th>Role</th>
+      <th>Status</th><th>Registrations</th><th>Attendance rows</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for user, registration_count, attendance_count in rows %}
+    <tr>
+      <td>{{ user.id }}</td>
+      <td><a href="{{ url_for('participants.participant_detail', user_id=user.id) }}">{{ user.full_name }}</a></td>
+      <td>{{ user.email }}</td>
+      <td>{{ user.student_id or '—' }}</td>
+      <td><span class="role-badge role-{{ user.role_name }}">{{ user.role_display }}</span></td>
+      <td>
+        <span class="status-dot status-{{ 'on' if user.is_active else 'off' }}"></span>
+        {{ 'Active' if user.is_active else 'Inactive' }}
+      </td>
+      <td>{{ registration_count }}</td>
+      <td>{{ attendance_count }}</td>
+      <td class="row-actions">
+        <a class="btn btn-small" href="{{ url_for('participants.participant_detail', user_id=user.id) }}">Open</a>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="9">No registrations match these filters.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if not rows %}
+<div class="empty-state">
+  <div class="empty-icon">&#128101;</div>
+  <h3>No participants to show</h3>
+  <p>
+    {% if search or role or activity_id %}Try clearing the filters.
+    {% else %}Participants appear here once they have a registration record on an activity.{% endif %}
+  </p>
+</div>
+{% endif %}
+{% endblock %}

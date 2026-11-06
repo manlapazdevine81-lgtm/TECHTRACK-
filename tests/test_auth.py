@@ -2,19 +2,21 @@
 from app.extensions import db
 from app.models.user import ROLE_ADMIN, ROLE_PARTICIPANT, User
 
-from .conftest import login
+from .conftest import get_csrf, login, logout
 
 VALID = {
     "full_name": "Juan Dela Cruz",
     "email": "juan@student.demo",
     "student_id": "2026-0001",
-    "password": "Secret123",
-    "confirm_password": "Secret123",
+    "password": "Secret123!",
+    "confirm_password": "Secret123!",
 }
 
 
 def _register(client, **overrides):
     data = {**VALID, **overrides}
+    token = get_csrf(client, "/register")
+    data["csrf_token"] = token
     return client.post("/register", data=data, follow_redirects=True)
 
 
@@ -28,8 +30,8 @@ def test_register_valid(client):
         user = User.query.filter_by(email="juan@student.demo").first()
         assert user is not None
         assert user.role_name == ROLE_PARTICIPANT  # never privileged
-        assert user.password_hash != "Secret123"  # hashed, never plain
-        assert user.check_password("Secret123")
+        assert user.password_hash != "Secret123!"  # hashed, never plain
+        assert user.check_password("Secret123!")
 
 
 def test_register_rejects_privileged_role_field(client):
@@ -41,7 +43,8 @@ def test_register_rejects_privileged_role_field(client):
 
 
 def test_register_missing_fields(client):
-    resp = client.post("/register", data={}, follow_redirects=True)
+    token = get_csrf(client, "/register")
+    resp = client.post("/register", data={"csrf_token": token}, follow_redirects=True)
     assert resp.status_code == 200
     assert b"Full name is required" in resp.data
     assert b"Email is required" in resp.data
@@ -88,9 +91,10 @@ def test_login_success_and_session(client, make_user):
 
 def test_login_wrong_password(client, make_user):
     make_user(ROLE_PARTICIPANT, email="p@test.demo", password="Passw0rd!")
+    token = get_csrf(client, "/login")
     resp = client.post(
         "/login",
-        data={"email": "p@test.demo", "password": "WRONG"},
+        data={"email": "p@test.demo", "password": "WRONG", "csrf_token": token},
         follow_redirects=True,
     )
     assert b"Invalid email or password" in resp.data
@@ -99,9 +103,10 @@ def test_login_wrong_password(client, make_user):
 
 
 def test_login_unknown_email_same_message(client):
+    token = get_csrf(client, "/login")
     resp = client.post(
         "/login",
-        data={"email": "ghost@test.demo", "password": "whatever1"},
+        data={"email": "ghost@test.demo", "password": "whatever1", "csrf_token": token},
         follow_redirects=True,
     )
     assert b"Invalid email or password" in resp.data  # no user enumeration
@@ -111,7 +116,7 @@ def test_logout_invalidates_session(client, make_user):
     make_user(ROLE_PARTICIPANT, email="p@test.demo", password="Passw0rd!")
     login(client, "p@test.demo", "Passw0rd!")
     assert client.get("/dashboard").status_code == 200
-    resp = client.post("/logout", follow_redirects=False)
+    resp = logout(client)
     assert resp.status_code == 302
     # Protected route requires login again after logout:
     dash = client.get("/dashboard")
@@ -126,8 +131,19 @@ def test_protected_routes_redirect_anonymous(client):
         resp = client.get(url)
         assert resp.status_code == 302, url
         assert "/login" in resp.headers["Location"], url
-    # Logout is POST-only (405 on GET) and anonymous POSTs are sent to login:
+    # Logout is POST-only (405 on GET); anonymous POST with valid CSRF -> login redirect:
     assert client.get("/logout").status_code == 405
-    resp = client.post("/logout")
+    token = get_csrf(client, "/login")
+    resp = client.post("/logout", data={"csrf_token": token})
     assert resp.status_code == 302
     assert "/login" in resp.headers["Location"]
+
+
+def test_post_without_csrf_token_rejected(client, make_user):
+    make_user(ROLE_PARTICIPANT, email="p@test.demo", password="Passw0rd!")
+    # Login POST with no token must fail (400) even with correct credentials:
+    resp = client.post(
+        "/login", data={"email": "p@test.demo", "password": "Passw0rd!"}
+    )
+    assert resp.status_code == 400
+    assert client.get("/dashboard").status_code == 302

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Attendance — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Attendance / Participation</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+<p class="muted">Every attendance record across all activities, filtered by activity or status.</p>
+
+<div class="kpi-grid">
+  {% for s, count in counts.items() %}
+  <div class="kpi-card">
+    <div class="kpi-label">{{ s | title }}</div>
+    <div class="kpi-value" data-count="{{ count }}">0</div>
+    <div class="kpi-sub">records</div>
+  </div>
+  {% endfor %}
+</div>
+
+<form class="table-toolbar" method="get" action="{{ url_for('activities.attendance_list') }}">
+  <select class="filter-select" name="activity_id" aria-label="Filter by activity">
+    <option value="">All activities</option>
+    {% for a in activities %}
+    <option value="{{ a.id }}" {% if selected_activity == a.id %}selected{% endif %}>{{ a.title }}</option>
+    {% endfor %}
+  </select>
+  <select class="filter-select" name="status" aria-label="Filter by attendance status">
+    <option value="">All statuses</option>
+    {% for s in attendance_statuses %}
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s | title }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-small" type="submit">Filter</button>
+  {% if selected_activity or status %}
+  <a class="btn btn-small btn-ghost" href="{{ url_for('activities.attendance_list') }}">Clear</a>
+  {% endif %}
+</form>
+
+<table class="table">
+  <thead>
+    <tr><th>#</th><th>Activity</th><th>Participant</th><th>Status</th><th>Time in</th><th>Time out</th><th>Remarks</th><th>Recorded by</th><th>Recorded (UTC)</th></tr>
+  </thead>
+  <tbody>
+  {% for rec in records %}
+    <tr>
+      <td>{{ rec.id }}</td>
+      <td><a href="{{ url_for('activities.activity_detail', activity_id=rec.activity_id) }}">{{ rec.activity.title if rec.activity else '—' }}</a></td>
+      <td>{{ rec.user.full_name if rec.user else '—' }}</td>
+      <td><span class="chip">{{ rec.attendance_status | title }}</span></td>
+      <td>{{ rec.time_in.strftime('%Y-%m-%d %H:%M') if rec.time_in else '—' }}</td>
+      <td>{{ rec.time_out.strftime('%Y-%m-%d %H:%M') if rec.time_out else '—' }}</td>
+      <td>{{ rec.remarks or '—' }}</td>
+      <td>{{ rec.recorder.full_name if rec.recorder else '—' }}</td>
+      <td>{{ rec.recorded_at.strftime('%Y-%m-%d %H:%M') if rec.recorded_at else '—' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="9">No attendance records match these filters.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

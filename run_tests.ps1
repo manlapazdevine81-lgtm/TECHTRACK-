@@ -1,0 +1,1 @@
+& 'C:\Users\manla\OneDrive\SAD FINAL PROJECT\.venv\Scripts\python.exe' -m pytest -v --tb=short 2>&1 | Tee-Object -FilePath "$env:TEMP\pytest_result.txt"

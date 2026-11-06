@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}My Activities — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>My Activities</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+<p class="muted">Activities you have joined and activities that are currently open for joining.</p>
+
+<div class="section-title">My joined activities</div>
+{% if joined %}
+<div class="card-grid">
+  {% for activity, registration in joined %}
+  <div class="card">
+    <span class="chip">{{ registration.status | title }}</span>
+    <h2>{{ activity.title }}</h2>
+    <p>
+      {% if activity.activity_type %}{{ activity.activity_type }}{% if activity.venue %} · {% endif %}{% endif %}
+      {{ activity.venue or '' }}
+    </p>
+    <p class="muted" style="margin-top:8px">
+      {{ activity.start_datetime.strftime('%Y-%m-%d %H:%M') if activity.start_datetime else '—' }} UTC
+      · activity status: {{ activity.status | title }}
+    </p>
+    <div class="row-actions" style="margin-top:12px">
+      {% if registration.is_active and activity.status == 'published' %}
+      <form method="post" action="{{ url_for('activities.activity_cancel_registration', activity_id=activity.id, user_id=current_user.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-small btn-danger-ghost" type="submit">Cancel registration</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">&#128101;</div>
+  <h3>You have not joined any activity yet</h3>
+  <p>Join an open activity below to get started.</p>
+</div>
+{% endif %}
+
+<div class="section-title">Open for joining</div>
+{% if open_activities %}
+<div class="card-grid">
+  {% for activity in open_activities %}
+  <div class="card card-live">
+    <span class="chip chip-live">Published</span>
+    <h2>{{ activity.title }}</h2>
+    <p>
+      {% if activity.activity_type %}{{ activity.activity_type }}{% if activity.venue %} · {% endif %}{% endif %}
+      {{ activity.venue or '' }}
+    </p>
+    <p class="muted" style="margin-top:8px">
+      {{ activity.start_datetime.strftime('%Y-%m-%d %H:%M') if activity.start_datetime else '—' }} UTC
+    </p>
+    <form method="post" action="{{ url_for('activities.activity_register', activity_id=activity.id) }}" style="margin-top:12px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-small btn-primary btn-inline" type="submit">Join activity</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">&#128197;</div>
+  <h3>No activities are open right now</h3>
+  <p>Published activities appear here as soon as staff open them for registration.</p>
+</div>
+{% endif %}
+{% endblock %}

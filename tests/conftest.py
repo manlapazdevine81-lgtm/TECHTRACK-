@@ -35,6 +35,8 @@ def app():
             "SQLALCHEMY_DATABASE_URI": _test_database_url(),
             "TESTING": True,
             "SECRET_KEY": "pytest-only-key",
+            # Email safety: no test can ever open a real SMTP connection.
+            "MAIL_SUPPRESS_SEND": True,
         }
     )
     yield application
@@ -44,6 +46,7 @@ def app():
 def client(app):
     # Fresh schema + four approved roles for every test.
     with app.app_context():
+        db.session.remove()
         db.drop_all()
         db.create_all()
         Role.ensure_defaults()
@@ -78,8 +81,38 @@ def make_user(app):
 
 
 def login(client, email: str, password: str):
+    """Login helper — automatically fetches a valid CSRF token first."""
+    token = get_csrf(client, "/login")
     return client.post(
         "/login",
-        data={"email": email, "password": password},
+        data={"email": email, "password": password, "csrf_token": token},
         follow_redirects=False,
     )
+
+
+def logout(client):
+    """POST /logout with a valid CSRF token."""
+    token = get_csrf(client, "/dashboard")
+    return client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+
+import re
+
+
+def get_csrf(client, path: str = "/login") -> str:
+    """GET a page and extract the signed CSRF token from its rendered form.
+
+    Flask-WTF 1.3.x signs tokens: session stores a raw value while forms carry
+    the signed token, so tests must use the token exactly as rendered.
+    """
+    resp = client.get(path)
+    match = re.search(rb'name="csrf_token"\s+value="([^"]+)"', resp.data)
+    assert match, f"no csrf_token field found on GET {path}"
+    return match.group(1).decode()
+
+
+def post_csrf(client, url: str, form_path: str | None = None, follow: bool = False, **data):
+    """POST to `url` with a valid CSRF token (token fetched from form_path page)."""
+    token = get_csrf(client, form_path or url)
+    data["csrf_token"] = token
+    return client.post(url, data=data, follow_redirects=follow)

@@ -1,32 +1,94 @@
 {% extends "base.html" %}
-{% block title %}User Management — TechIS{% endblock %}
+{% block title %}Member Management — TechIS{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>User Management</h1>
-  <span class="chip chip-live">Working · read-only demo</span>
+  <h1>Member Management</h1>
+  <span class="chip chip-live">Working</span>
+  <a class="btn btn-primary btn-inline" href="{{ url_for('main.admin_user_create') }}">+ Add member</a>
 </div>
-<p class="muted">All system accounts and their roles (server-side access restricted to the System Administrator).</p>
+<p class="muted">All system accounts and their roles. Access is restricted to the System Administrator (server-side).</p>
 
-<table class="table">
+<div class="table-toolbar">
+  <input id="member-search" type="search" placeholder="Search name, email, or student ID…"
+         aria-label="Search members">
+  <select id="member-role" class="filter-select" aria-label="Filter by role">
+    <option value="">All roles</option>
+    <option value="system_administrator">System Administrator</option>
+    <option value="techis_officer">TechIS Officer</option>
+    <option value="techis_adviser">TechIS Adviser</option>
+    <option value="event_participant">Event Participant</option>
+  </select>
+  <select id="member-status" class="filter-select" aria-label="Filter by status">
+    <option value="">All statuses</option>
+    <option value="active">Active</option>
+    <option value="inactive">Inactive</option>
+  </select>
+  <span class="muted" id="member-count"></span>
+</div>
+
+<table class="table table-members" id="members-table">
   <thead>
-    <tr><th>#</th><th>Full name</th><th>Email</th><th>Student ID</th><th>Role</th><th>Active</th><th>Created (UTC)</th></tr>
+    <tr>
+      <th class="sortable" data-col="0" data-type="num">#<span class="sort-indicator"></span></th>
+      <th class="sortable" data-col="1">Full name<span class="sort-indicator"></span></th>
+      <th class="sortable" data-col="2">Email<span class="sort-indicator"></span></th>
+      <th class="sortable" data-col="3">Student ID<span class="sort-indicator"></span></th>
+      <th class="sortable" data-col="4">Role<span class="sort-indicator"></span></th>
+      <th>Organizational position</th>
+      <th class="sortable" data-col="5">Status<span class="sort-indicator"></span></th>
+      <th>Created (UTC)</th><th>Actions</th>
+    </tr>
   </thead>
   <tbody>
   {% for u in users %}
-    <tr>
+    <tr data-role="{{ u.role_name }}" data-active="{{ '1' if u.is_active else '0' }}">
       <td>{{ u.id }}</td>
       <td>{{ u.full_name }}</td>
       <td>{{ u.email }}</td>
       <td>{{ u.student_id or '—' }}</td>
       <td><span class="role-badge role-{{ u.role_name }}">{{ u.role_display }}</span></td>
-      <td>{{ 'Yes' if u.is_active else 'No' }}</td>
+      <td>
+        {% if u.id in position_labels %}
+          <span class="chip">{{ position_labels[u.id] }}</span>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td>
+        <span class="status-dot status-{{ 'on' if u.is_active else 'off' }}"></span>
+        {{ 'Active' if u.is_active else 'Inactive' }}
+        {% if u.must_change_password %}<span class="chip">Temp password</span>{% endif %}
+      </td>
       <td>{{ u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else '—' }}</td>
+      <td class="row-actions">
+        <a class="btn btn-small" href="{{ url_for('main.admin_user_edit', user_id=u.id) }}">Edit</a>
+        <a class="btn btn-small" href="{{ url_for('positions.assign', user_id=u.id) }}">Position</a>
+        {% if u.must_change_password %}
+        <form method="post" action="{{ url_for('main.admin_user_resend_credentials', user_id=u.id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-small btn-success-ghost" type="submit"
+                  title="Generate a new temporary password and email it again">Resend credentials</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('main.admin_user_toggle', user_id=u.id) }}" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-small {{ 'btn-danger-ghost' if u.is_active else 'btn-success-ghost' }}" type="submit">
+            {{ 'Deactivate' if u.is_active else 'Activate' }}
+          </button>
+        </form>
+      </td>
     </tr>
   {% else %}
-    <tr><td colspan="7">No users yet.</td></tr>
+    <tr><td colspan="9">No members yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>
+<div class="empty-state" id="member-empty" hidden>
+  <div class="empty-icon">&#128269;</div>
+  <h3>No members match your filters</h3>
+  <p>Try a different search term, role, or status selection.</p>
+</div>
 
-<p class="muted">Account creation/editing UI is planned for Phase 2 (admin CRUD).</p>
+<p class="muted">Role <em>assignments</em> can be changed here; the four approved role <em>definitions</em> cannot be modified (T19).</p>
+<script src="{{ url_for('static', filename='js/users.js') }}" defer></script>
 {% endblock %}

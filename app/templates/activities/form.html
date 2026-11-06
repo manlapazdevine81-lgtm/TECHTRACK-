@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }} — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ form_title }}</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+
+<div class="notice">
+  Activities start as <strong>drafts</strong>. Publish one from its detail page to let
+  participants register. Activities are never deleted — they are cancelled so the
+  registration and attendance history is preserved.
+</div>
+
+<div class="form-panel">
+  <form method="post" novalidate class="member-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="title">Title *</label>
+    <input id="title" name="title" type="text" required maxlength="255"
+           value="{{ form_values.get('title', '') }}">
+
+    <label for="description">Description <span class="muted">(optional)</span></label>
+    <textarea id="description" name="description" rows="5">{{ form_values.get('description', '') }}</textarea>
+
+    <label for="activity_type">Activity type <span class="muted">(optional)</span></label>
+    <input id="activity_type" name="activity_type" type="text" maxlength="64"
+           value="{{ form_values.get('activity_type', '') }}">
+
+    <label for="venue">Venue <span class="muted">(optional)</span></label>
+    <input id="venue" name="venue" type="text" maxlength="255"
+           value="{{ form_values.get('venue', '') }}">
+
+    <label for="start_datetime">Start date and time *</label>
+    <input id="start_datetime" name="start_datetime" type="datetime-local" required
+           value="{{ form_values.get('start_datetime', '') }}">
+
+    <label for="end_datetime">End date and time *</label>
+    <input id="end_datetime" name="end_datetime" type="datetime-local" required
+           value="{{ form_values.get('end_datetime', '') }}">
+
+    <label for="responsible_officer_id">
+      Responsible officer <span class="muted">(optional)</span>
+    </label>
+    <select id="responsible_officer_id" name="responsible_officer_id">
+      <option value="">— None —</option>
+      {% for officer in officers %}
+      <option value="{{ officer.id }}"
+        {% if form_values.get('responsible_officer_id') == officer.id | string %}selected{% endif %}>
+        {{ officer.label }}
+      </option>
+      {% endfor %}
+    </select>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">
+        {{ 'Create activity' if not activity else 'Save changes' }}
+      </button>
+      <a class="btn" href="{{ url_for('activities.activity_detail', activity_id=activity.id) if activity else url_for('activities.activity_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

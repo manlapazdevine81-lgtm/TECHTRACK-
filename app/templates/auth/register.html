@@ -1,8 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Register — TechIS{% endblock %}
 {% block content %}
+<script>
+  (function () {
+    try { document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
+  })();
+</script>
+<div class="aurora" aria-hidden="true"></div>
+<div class="aurora-geo g1" aria-hidden="true"></div>
+<div class="aurora-geo g2" aria-hidden="true"></div>
+
+<div class="auth-hero">
+  <img class="hero-logo" src="{{ url_for('static', filename='techis-logo.jpg') }}"
+       alt="TechIS logo"
+       onerror="this.remove(); var m=document.querySelector('.hero-mark'); if(m) m.style.display='flex';">
+  <div class="hero-mark" style="display:none" aria-hidden="true">T</div>
+  <h1>Join the TechIS system</h1>
+  <div class="hero-sub">Create your Event Participant account</div>
+</div>
+
 <div class="auth-card">
   <h1>Create an account</h1>
+  <p class="auth-lede">Join as an Event Participant. Your role is set by the system — this form never grants privileged access.</p>
 
   <div class="notice">
     <strong>Demonstration notice (provisional):</strong> self-registration is pending
@@ -13,26 +32,63 @@
     provisional (<em>T18</em>).
   </div>
 
-  <form method="post" novalidate>
-    <label for="full_name">Full name *</label>
-    <input id="full_name" name="full_name" type="text" autocomplete="name" required
-           value="{{ request.form.full_name or '' }}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      {% if category == "error" %}
+      <div class="flash flash-error" role="alert">{{ message }}</div>
+      {% endif %}
+    {% endfor %}
+  {% endwith %}
 
-    <label for="email">Email *</label>
-    <input id="email" name="email" type="email" autocomplete="email" required
-           value="{{ request.form.email or '' }}">
+  <form method="post" novalidate class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <label for="student_id">Student ID <span class="muted">(optional)</span></label>
-    <input id="student_id" name="student_id" type="text" value="{{ request.form.student_id or '' }}">
+    <fieldset class="field-set">
+      <legend>Your details</legend>
+      <div class="field-group">
+        <label for="full_name">Full name <span class="req">*</span></label>
+        <input id="full_name" name="full_name" type="text" autocomplete="name" required
+               value="{{ request.form.full_name or '' }}">
+      </div>
 
-    <label for="password">Password * <span class="muted">(min 8 characters)</span></label>
-    <input id="password" name="password" type="password" autocomplete="new-password" required>
+      <div class="field-group">
+        <label for="email">Email address <span class="req">*</span></label>
+        <input id="email" name="email" type="email" autocomplete="email" required
+               value="{{ request.form.email or '' }}">
+      </div>
 
-    <label for="confirm_password">Confirm password *</label>
-    <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+      <div class="field-group">
+        <label for="student_id">Student ID <span class="muted">(optional)</span></label>
+        <input id="student_id" name="student_id" type="text"
+               value="{{ request.form.student_id or '' }}">
+      </div>
+    </fieldset>
+
+    <fieldset class="field-set">
+      <legend>Set your password</legend>
+      <div class="field-group">
+        <label for="password">Password <span class="req">*</span>
+          <span class="pw-hint">(min 8 characters)</span>
+        </label>
+        <div class="password-input">
+          <input id="password" name="password" type="password" autocomplete="new-password" required>
+          <button type="button" class="btn btn-small btn-toggle-pw" aria-label="Show password"
+                  aria-controls="password">&#128065;</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="confirm_password">Confirm password <span class="req">*</span></label>
+        <div class="password-input">
+          <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+          <button type="button" class="btn btn-small btn-toggle-pw" aria-label="Show password"
+                  aria-controls="confirm_password">&#128065;</button>
+        </div>
+      </div>
+    </fieldset>
 
     <button class="btn btn-primary" type="submit">Register</button>
   </form>
-  <p class="muted">Already registered? <a href="{{ url_for('auth.login') }}">Log in</a>.</p>
+  <p class="auth-footer">Already registered? <a href="{{ url_for('auth.login') }}">Log in</a>.</p>
 </div>
 {% endblock %}

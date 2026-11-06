@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Reports — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Reports</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+<p class="muted">
+  Downloadable CSV reports built from recorded registrations and attendance.
+  Counts, rates and dates only — no scores, no rankings.
+  {% if current_user.role_name == 'techis_adviser' %}
+  Participant email and student ID columns are omitted from your exports.
+  {% endif %}
+  PDF reports are not available: report formats are pending decision T13.
+</p>
+
+<form class="table-toolbar" method="get" action="{{ url_for('reports.report_list') }}">
+  <select class="filter-select" name="academic_year" aria-label="Filter by academic year">
+    <option value="">All school years</option>
+    {% for year in academic_years %}
+    <option value="{{ year }}" {% if selected_year==year %}selected{% endif %}>AY {{ year }}</option>
+    {% endfor %}
+  </select>
+  <select class="filter-select" name="activity_id" aria-label="Filter by activity">
+    <option value="">All activities</option>
+    {% for a in activities %}
+    <option value="{{ a.activity_id }}" {% if selected_activity|string==a.activity_id|string %}selected{% endif %}>{{
+      a.title }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-small" type="submit">Apply filters</button>
+  {% if selected_activity or selected_year %}
+  <a class="btn btn-small btn-ghost" href="{{ url_for('reports.report_list') }}">Clear</a>
+  {% endif %}
+</form>
+
+<p class="muted">
+  Filters apply to every download below. School year is derived from each activity's start
+  date (June–May boundary). Invalid or unknown filter values are ignored with a notice rather
+  than producing an empty file.
+</p>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Report</th>
+      <th>Contents</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for key, report in reports.items() %}
+    <tr>
+      <td>{{ report.label }}</td>
+      <td>{{ report.description }}</td>
+      <td class="row-actions">
+        <a class="btn btn-small"
+          href="{{ url_for('reports.export_report', report_key=key) }}{% if selected_activity or selected_year %}?{% if selected_activity %}activity_id={{ selected_activity | urlencode }}{% endif %}{% if selected_activity and selected_year %}&{% endif %}{% if selected_year %}academic_year={{ selected_year | urlencode }}{% endif %}{% endif %}">
+          Download CSV
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if not activities %}
+<div class="notice">
+  No activities exist yet. Exports will contain only the header row until activities,
+  registrations, and attendance are recorded.
+</div>
+{% endif %}
+
+<div class="section-title">CSV safety</div>
+<p class="muted" style="margin-top:-6px">
+  Files are UTF-8 with a byte-order mark, use CRLF line endings, and quote embedded commas,
+  quotes and newlines. Cells beginning with <code>=</code>, <code>+</code>, <code>-</code>,
+  <code>@</code>, tab or carriage return are neutralized so a spreadsheet cannot execute them.
+  Timestamps are written as ISO-8601 UTC text. Empty rates are left blank (never 0).
+</p>
+{% endblock %}

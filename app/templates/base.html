@@ -1,16 +1,33 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a1428">
   <title>{% block title %}TechIS Management System{% endblock %}</title>
+  <!-- No-flash theme bootstrap: runs before first paint -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("tt-theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.setAttribute("data-theme", t);
+        } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      } catch (e) { /* storage unavailable — keep default dark */ }
+    })();
+  </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="{% if current_user.is_authenticated %}app-shell{% else %}auth-shell{% endif %}">
 {% if current_user.is_authenticated %}
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <span class="brand-mark">T</span>
+      <img class="brand-logo" src="{{ url_for('static', filename='techis-logo.jpg') }}"
+           alt="TechIS logo"
+           onerror="this.remove(); var m=document.querySelector('.brand-mark'); if(m) m.style.display='inline-flex';">
+      <span class="brand-mark" style="display:none" aria-hidden="true">T</span>
       <div>
         <strong>TechIS</strong>
         <small>Management System</small>
@@ -20,25 +37,43 @@
       <div class="user-name">{{ current_user.full_name }}</div>
       <span class="role-badge role-{{ current_user.role_name }}">{{ current_user.role_display }}</span>
     </div>
-    <nav class="nav">
-      <a class="nav-link" href="{{ url_for('main.dashboard') }}">&#9632; Dashboard</a>
+    <nav class="nav" aria-label="Main navigation">
+      <a class="nav-link" href="{{ url_for('main.dashboard') }}"
+         {% if request.endpoint == 'main.dashboard' %}aria-current="page"{% endif %}>&#9632; Dashboard</a>
       {% if current_user.role_name == 'system_administrator' %}
       <div class="nav-section">Administration</div>
-      <a class="nav-link" href="{{ url_for('main.admin_users') }}">&#9632; User Management</a>
+      <a class="nav-link" href="{{ url_for('main.admin_users') }}"
+         {% if request.endpoint and request.endpoint.startswith('main.admin_user') %}aria-current="page"{% endif %}>&#9632; Member Management</a>
       {% endif %}
       <div class="nav-section">Modules</div>
       {% for m in nav_modules %}
-      <a class="nav-link" href="{{ url_for('main.module_placeholder', key=m.key) }}">{{ m.label }}
-        <span class="chip">{{ m.phase }}</span>
+      <a class="nav-link" href="{{ m.url }}"
+         {% if request.endpoint == 'main.module_placeholder' and request.view_args and request.view_args.get('key') == m.key %}aria-current="page"{% elif request.endpoint == m.endpoint %}aria-current="page"{% endif %}>{{ m.label }}
+        <span class="chip">{{ 'Working' if m.implemented else m.phase }}</span>
       </a>
       {% endfor %}
       {% if not nav_modules %}
       <span class="nav-empty">No module links for this role yet.</span>
       {% endif %}
+      {% if feedback_cta %}
+      <div class="nav-section">Anonymous</div>
+      <a class="nav-link" href="{{ url_for('feedback.submit') }}"
+         {% if request.endpoint == 'feedback.submit' %}aria-current="page"{% endif %}>&#128172; Give Officer Feedback
+        <span class="chip">Anonymous</span>
+      </a>
+      {% endif %}
     </nav>
-    <form class="logout-form" method="post" action="{{ url_for('auth.logout') }}">
-      <button type="submit" class="btn btn-ghost">Log out</button>
-    </form>
+    <div class="sidebar-foot">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+        <span class="tt-moon" aria-hidden="true">&#9789;</span>
+        <span class="tt-sun" aria-hidden="true">&#9728;</span>
+        <span data-theme-label>Switch theme</span>
+      </button>
+      <form class="logout-form" method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-ghost">Log out</button>
+      </form>
+    </div>
   </aside>
 {% endif %}
 
@@ -49,11 +84,17 @@
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
-      <div class="flash flash-{{ category }}" role="alert">{{ message }}</div>
+      <div class="flash flash-{{ category }}" role="alert" data-animate>{{ message }}</div>
     {% endfor %}
   {% endwith %}
 
-  {% block content %}{% endblock %}
+  <div data-stagger>
+    {% block content %}{% endblock %}
+  </div>
 </main>
+
+<!-- Motion: GSAP from official CDN (optional — app works if it fails to load) -->
+<script defer src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

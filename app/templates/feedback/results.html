@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Officer Feedback — results (ratings only) — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Officer Feedback — Results</h1>
+  <span class="chip">Ratings only</span>
+</div>
+
+<div class="notice">
+  <p style="margin:0 0 6px"><strong>Ratings only, organisation-wide.</strong>
+     This view reports aggregate ratings across the whole organization. It never
+     shows per-officer results, so no single response can be attributed to a
+     person.</p>
+  <p style="margin:0"><strong>Comments are never shown here.</strong> Written answers,
+     respondent identities, submission times, and individual responses are not
+     available to this view.</p>
+</div>
+
+<div class="empty-state" style="border-style:dashed">
+  <div class="empty-icon">&#128274;</div>
+  {% if has_responses %}
+  <h3>Results are pending privacy-threshold approval</h3>
+  <p>Responses have been recorded, but the minimum-response privacy threshold
+     (T9) has not been confirmed yet. Aggregate figures stay hidden until it is,
+     so that no small group of responses can be traced back to individuals.</p>
+  {% else %}
+  <h3>No responses recorded yet</h3>
+  <p>Once officers submit anonymous feedback, aggregate ratings will become
+     available here after the privacy threshold (T9) is approved.</p>
+  {% endif %}
+  <p style="margin-top:10px" class="muted">No averages, response counts, distributions,
+     comments, or per-response details are displayed at this stage.</p>
+</div>
+
+<p class="muted">
+  Submissions remain fully anonymous: no respondent name, account, token, session
+  link, or per-response timestamp is stored or exposed.
+</p>
+{% endblock %}

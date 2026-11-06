@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }} — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ form_title }}</h1>
+  <span class="chip chip-live">Working</span>
+</div>
+
+<div class="notice">
+  <strong>Provisional:</strong> administrator-created credentials are a demonstration
+  convenience pending TechIS approval (<em>T5</em>). No email verification or password
+  reset is sent (<em>T3/T4</em>) — share credentials with the member directly and
+  securely.
+</div>
+
+<div class="form-panel">
+  <form method="post" novalidate class="member-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="full_name">Full name *</label>
+    <input id="full_name" name="full_name" type="text" required
+           value="{{ form_values.get('full_name', '') }}">
+
+    <label for="email">Email *</label>
+    <input id="email" name="email" type="email" required
+           value="{{ form_values.get('email', '') }}">
+
+    <label for="student_id">Student ID <span class="muted">(optional, unique)</span></label>
+    <input id="student_id" name="student_id" type="text"
+           value="{{ form_values.get('student_id', '') }}">
+
+    <label for="role_name">Role * <span class="muted">(approved roles only)</span></label>
+    <select id="role_name" name="role_name" required>
+      {% for role in roles %}
+      <option value="{{ role.name }}"
+        {% if form_values.get('role_name') == role.name %}selected{% endif %}>
+        {{ role.display_name }}
+      </option>
+      {% endfor %}
+    </select>
+
+    {% if user %}
+    <label for="password">
+      Set a new password <span class="muted">(optional — leave blank to keep the current password)</span>
+    </label>
+    <input id="password" name="password" type="password" autocomplete="new-password">
+    <p class="muted" style="margin-top:-6px">
+      At least 8 characters, one uppercase letter, one digit, and one special character.
+    </p>
+    {% else %}
+    <div class="notice notice-soft">
+      <p style="margin:0">For a <strong>System Administrator, TechIS Officer, or Adviser</strong>, a
+         <strong>temporary password</strong> is generated automatically and emailed to the new member.
+         They must change it immediately after their first login. The password is never shown here.</p>
+      <p style="margin:8px 0 0"><strong>Participants</strong> are not provisioned this way. Select the
+         Participant role to reveal the initial-password field below; no temporary password is
+         generated and no email is sent.</p>
+    </div>
+    <div id="participant-password-block">
+      <label for="password">
+        Initial password <span class="muted">(required for a Participant account)</span>
+      </label>
+      <input id="password" name="password" type="password" autocomplete="new-password">
+      <p class="muted" style="margin-top:-6px">
+        At least 8 characters, one uppercase letter, one digit, and one special character.
+        Required only when the role is Event Participant.
+      </p>
+    </div>
+    {% endif %}
+
+    <label class="checkbox-label">
+      <input id="is_active" name="is_active" type="checkbox"
+             {% if form_values.get('is_active') %}checked{% endif %}>
+      Account active (may log in)
+      {% if user and user.id == current_user.id %}
+      <span class="muted">(your own account — must stay active)</span>
+      {% endif %}
+    </label>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">
+        {{ 'Create account' if not user else 'Save changes' }}
+      </button>
+      <a class="btn" href="{{ url_for('main.admin_users') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

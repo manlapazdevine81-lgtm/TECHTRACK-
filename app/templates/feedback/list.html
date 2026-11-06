@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Officer Feedback (view) — TechIS{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Officer Feedback</h1>
+  <span class="chip chip-live">Read-only</span>
+</div>
+
+<div class="notice">
+  <p style="margin:0 0 6px"><strong>Anonymous by design.</strong> Each row shows only the officer the
+     feedback is about. There is no respondent column, no token, and no per-response timestamp —
+     submission times are rounded to the hour before storage.</p>
+  <p style="margin:0">Aggregated reporting and the minimum-response privacy threshold (T9) are
+     Phase 7 work and are not implemented here.</p>
+</div>
+
+<table class="table">
+  <thead>
+    <tr><th>#</th><th>Officer evaluated</th><th>Answers</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+  {% for f in submissions %}
+    <tr>
+      <td>{{ f.id }}</td>
+      <td>{{ f.officer.full_name if f.officer else '—' }}</td>
+      <td>{{ f.answers | length }}</td>
+      <td><span class="chip">{{ f.status | title }}</span></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">No feedback has been submitted yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<p class="muted">Counts only. Individual answers and comments are intentionally not rendered in this
+   phase — aggregate display is pending T9.</p>
+{% endblock %}
